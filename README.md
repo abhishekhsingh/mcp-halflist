@@ -13,17 +13,109 @@ pip install mcp-halflist
 ## Quick Start
 
 ```bash
-# Check a server launched via stdio
-halflist check --stdio "python3 my_server.py"
+# Full audit of the official MCP reference server
+halflist audit --stdio "npx -y @modelcontextprotocol/server-everything"
 
 # JSON output for CI pipelines
-halflist check --stdio "python3 my_server.py" --format json
-
-# Run only specific suites
-halflist check --stdio "python3 my_server.py" --suite handshake --suite tools
+halflist audit --stdio "npx -y @modelcontextprotocol/server-everything" --format json
 ```
 
-> **macOS note:** Use `python3` instead of `python` — macOS does not ship `python` on `PATH` by default.
+### Test your own server
+
+```bash
+halflist audit --stdio "python3 my_server.py"
+halflist check --stdio "python3 my_server.py" --format json
+```
+
+### More examples
+
+```bash
+# Time server
+halflist check --stdio "npx -y @modelcontextprotocol/server-time"
+
+# Fetch server
+halflist check --stdio "npx -y @modelcontextprotocol/server-fetch"
+
+# Filesystem server
+halflist check --stdio "npx -y @modelcontextprotocol/server-filesystem /tmp"
+```
+
+## Commands
+
+### `halflist audit` — Full Audit (Recommended)
+
+Run conformance checks + benchmark every tool in a single shot.
+
+```bash
+# One command, full picture
+halflist audit --stdio "npx -y @modelcontextprotocol/server-everything"
+
+# JSON output for CI
+halflist audit --stdio "python3 my_server.py" --format json
+
+# Control benchmark iterations
+halflist audit --stdio "python3 my_server.py" --iterations 50
+```
+
+### `halflist check` — Conformance Testing
+
+Run protocol conformance checks against an MCP server.
+
+```bash
+halflist check --stdio "npx -y @modelcontextprotocol/server-everything"
+halflist check --stdio "python3 my_server.py" --format json
+halflist check --stdio "python3 my_server.py" --suite handshake --verbose
+```
+
+### `halflist bench` — Latency Benchmarking
+
+Benchmark latency per tool with p50/p95/p99 percentiles.
+
+```bash
+# Benchmark first 5 tools (default)
+halflist bench --stdio "npx -y @modelcontextprotocol/server-everything"
+
+# Benchmark specific tools
+halflist bench --stdio "python3 my_server.py" --tool search --tool get_topic
+
+# Benchmark all tools with 50 iterations
+halflist bench --stdio "python3 my_server.py" --all --iterations 50
+
+# JSON output
+halflist bench --stdio "python3 my_server.py" --format json
+```
+
+### `halflist watch` — Health Monitoring
+
+Continuously monitor an MCP server's health.
+
+```bash
+# Probe every 60 seconds (default)
+halflist watch --stdio "npx -y @modelcontextprotocol/server-time"
+
+# Custom interval, log to file
+halflist watch --stdio "python3 my_server.py" --interval 30 --log health.jsonl
+
+# Run 10 probes and exit
+halflist watch --stdio "python3 my_server.py" --count 10
+```
+
+### `halflist report` — Markdown & Badges
+
+Generate markdown or SVG badge from a halflist JSON report.
+
+```bash
+# Generate markdown from audit results
+halflist audit --stdio "python3 my_server.py" --format json > results.json
+halflist report results.json
+
+# Generate SVG badge
+halflist report results.json --badge -o badge.svg
+
+# Generate markdown from bench results
+halflist bench --stdio "python3 my_server.py" --format json > bench.json
+halflist report bench.json -o BENCH.md
+```
 
 ## What It Checks
 
@@ -55,7 +147,7 @@ halflist check --stdio "python3 my_server.py" --suite handshake --suite tools
 Rich, colored output with a scored summary:
 
 ```
-╭─ mcp-halflist v0.1.0 ──────────────────────────────────────╮
+╭─ mcp-halflist v0.2.0 ──────────────────────────────────────╮
 │                                                              │
 │  Server:     my-server v1.0.0                               │
 │  Transport:  stdio                                           │
@@ -66,7 +158,15 @@ Rich, colored output with a scored summary:
 
 ### JSON (`--format json`)
 
-Full structured report suitable for CI integration. Returns a `HalflistReport` object with score, suites, individual check results, and timing data.
+Full structured report suitable for CI integration. Returns a `HalflistReport`, `BenchReport`, or `AuditReport` object with score, suites, benchmarks, and timing data.
+
+### Markdown (`halflist report`)
+
+Generate markdown tables from JSON output, suitable for embedding in README or PR comments.
+
+### SVG Badge (`halflist report --badge`)
+
+Shields.io-style SVG badge showing score or benchmark summary.
 
 ## Exit Codes
 
@@ -80,12 +180,43 @@ Full structured report suitable for CI integration. Returns a `HalflistReport` o
 ## CLI Options
 
 ```
+halflist audit --stdio <command>   Launch server via stdio (check + bench all tools)
+               -n / --iterations   Benchmark iterations per tool (default: 10)
+               -w / --warmup       Warmup iterations (default: 2)
+               --verbose           Show all check details
+               --format <fmt>      Output format: terminal or json
+               --quiet / -q        Suppress server stderr
+               --timeout <secs>    Timeout per operation (default: 30)
+
 halflist check --stdio <command>   Launch server via stdio
                --format <fmt>      Output format: terminal (default) or json
                --suite <name>      Filter to specific suite(s), repeatable
                --verbose           Show all check details
+               --quiet / -q        Suppress server stderr
                --timeout <secs>    Timeout per operation (default: 30)
-               --version           Print version and exit
+
+halflist bench --stdio <command>   Launch server via stdio
+               --tool <name>       Benchmark specific tool(s), repeatable
+               --all               Benchmark all tools (default: first 5)
+               -n / --iterations   Iterations per tool (default: 10)
+               -w / --warmup       Warmup iterations (default: 2)
+               --format <fmt>      Output format: terminal or json
+               --quiet / -q        Suppress server stderr
+               --timeout <secs>    Timeout per operation (default: 30)
+
+halflist watch --stdio <command>   Launch server via stdio
+               -i / --interval     Seconds between probes (default: 60)
+               -c / --count        Number of probes (default: infinite)
+               -l / --log <file>   Append JSONL probes to file
+               --quiet / -q        Suppress server stderr
+               --timeout <secs>    Timeout per operation (default: 30)
+
+halflist report <file.json>        Path to halflist JSON report
+               --format <fmt>      Output format: markdown (default)
+               --badge             Generate SVG badge instead
+               -o / --output       Write to file
+
+halflist --version                 Print version and exit
 ```
 
 ## How It Compares
@@ -95,6 +226,7 @@ halflist check --stdio <command>   Launch server via stdio
 | **Approach** | Automated test suite | Interactive GUI | Request-level testing |
 | **CI-first** | Yes | No | Partial |
 | **Scored reports** | Yes | No | No |
+| **Benchmarking** | Yes | No | No |
 | **Zero config** | Yes | Yes | Yes |
 
 Think of it this way: MCP Inspector and mcp-probe are Postman. mcp-halflist is pytest.
@@ -119,16 +251,10 @@ halflist check --stdio "python tests/servers/bad_server.py"
 ruff check src/ tests/
 ```
 
-## Roadmap
-
-- **v0.2.0** — HTTP/SSE transport, auth support
-- **v0.3.0** — `halflist bench` for performance benchmarking
-- **v1.0.0** — `halflist watch` for dev mode, full CI integration, JUnit/Markdown output
-
 ## License
 
 MIT
 
 ## Author
 
-Abhishekh Singh
+[Abhishekh Singh](https://abhishekhsingh.github.io/)

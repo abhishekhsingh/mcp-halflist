@@ -1,6 +1,6 @@
 [project]
 name = "mcp-halflist"
-version = "0.1.0"
+version = "0.2.0"
 description = "CI-first conformance testing and benchmarking CLI for MCP servers. Lint your MCP server before your users do."
 readme = "README.md"
 license = { text = "MIT" }
@@ -37,6 +37,7 @@ halflist = "halflist.cli:app"
 Homepage = "https://github.com/abhishekhsingh/mcp-halflist"
 Repository = "https://github.com/abhishekhsingh/mcp-halflist"
 Issues = "https://github.com/abhishekhsingh/mcp-halflist/issues"
+Author = "https://abhishekhsingh.github.io/"
 
 [build-system]
 requires = ["hatchling"]

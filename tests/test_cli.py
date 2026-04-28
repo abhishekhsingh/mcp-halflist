@@ -24,7 +24,7 @@ def test_cli_check_good_server_json() -> None:
 
     report = json.loads(result.output)
     assert report["score"] > 0
-    assert report["version"] == "0.1.0"
+    assert report["version"] == "0.2.0"
     assert report["transport"] == "stdio"
     assert len(report["suites"]) > 0
     assert report["total_failed"] == 0
