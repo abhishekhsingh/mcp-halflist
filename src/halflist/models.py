@@ -51,6 +51,8 @@ class ToolBenchmark(BaseModel):
     p95_ms: float
     p99_ms: float
     errors: int = 0
+    skipped: bool = False
+    skip_reason: str | None = None
 
 
 class BenchReport(BaseModel):
@@ -88,6 +90,13 @@ class AuditReport(BaseModel):
     benchmarks: list[ToolBenchmark]
     total_calls: int
     total_duration_ms: float
+
+
+class PinData(BaseModel):
+    server_name: str
+    server_version: str
+    timestamp: str
+    tool_hashes: dict[str, str]
 
 
 class WatchProbe(BaseModel):

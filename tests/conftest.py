@@ -14,3 +14,8 @@ def good_server_cmd() -> str:
 @pytest.fixture
 def bad_server_cmd() -> str:
     return f"{sys.executable} {SERVERS_DIR / 'bad_server.py'}"
+
+
+@pytest.fixture
+def poisoned_server_cmd() -> str:
+    return f"{sys.executable} {SERVERS_DIR / 'poisoned_server.py'}"

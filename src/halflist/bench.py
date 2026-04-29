@@ -21,11 +21,24 @@ async def bench_tool(
     args = generate_args(tool.inputSchema)
     errors = 0
 
+    warmup_failures = 0
     for _ in range(warmup):
         try:
-            await client.call_tool(tool.name, args)
+            result = await client.call_tool(tool.name, args)
+            if getattr(result, "isError", False):
+                warmup_failures += 1
         except Exception:
-            pass
+            warmup_failures += 1
+
+    if warmup > 0 and warmup_failures == warmup:
+        return ToolBenchmark(
+            tool_name=tool.name,
+            iterations=0,
+            min_ms=0, max_ms=0, mean_ms=0, median_ms=0,
+            p95_ms=0, p99_ms=0, errors=0,
+            skipped=True,
+            skip_reason="all warmup calls failed",
+        )
 
     latencies: list[float] = []
     for i in range(iterations):

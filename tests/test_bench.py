@@ -20,7 +20,7 @@ def test_bench_default_json() -> None:
     assert result.exit_code == 0, result.output
 
     report = json.loads(result.output)
-    assert report["version"] == "0.2.0"
+    assert report["version"] == "0.3.0"
     assert report["transport"] == "stdio"
     assert report["iterations"] == 3
     assert report["warmup"] == 0

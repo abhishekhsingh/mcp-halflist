@@ -1,8 +1,11 @@
 from halflist.report import (
     detect_report_type,
+    render_audit_html,
     render_audit_markdown,
     render_badge_svg,
+    render_bench_html,
     render_bench_markdown,
+    render_check_html,
     render_check_markdown,
 )
 
@@ -165,3 +168,57 @@ def test_detect_report_type() -> None:
     assert detect_report_type(SAMPLE_BENCH) == "bench"
     assert detect_report_type(SAMPLE_AUDIT) == "audit"
     assert detect_report_type({}) == "unknown"
+
+
+def test_check_html() -> None:
+    html = render_check_html(SAMPLE_CHECK)
+    assert "<!DOCTYPE html>" in html
+    assert "test-server" in html
+    assert "mcp-halflist" in html
+    assert "PASS" in html
+    assert "handshake" in html
+
+
+def test_bench_html() -> None:
+    html = render_bench_html(SAMPLE_BENCH)
+    assert "<!DOCTYPE html>" in html
+    assert "test-server" in html
+    assert "greet" in html
+    assert "add" in html
+    assert "bar-fill" in html
+
+
+def test_audit_html() -> None:
+    html = render_audit_html(SAMPLE_AUDIT)
+    assert "<!DOCTYPE html>" in html
+    assert "test-server" in html
+    assert "PASS" in html
+    assert "handshake" in html
+    assert "greet" in html
+    assert "gauge" in html
+
+
+def test_check_html_with_checks() -> None:
+    data = {
+        **SAMPLE_CHECK,
+        "suites": [
+            {
+                "name": "handshake",
+                "checks": [
+                    {"name": "init response", "status": "PASS", "message": None, "duration_ms": 10.0, "suite": "handshake"},
+                    {"name": "ping returns pong", "status": "FAIL", "message": "timeout", "duration_ms": 5.0, "suite": "handshake"},
+                ],
+                "passed": 1,
+                "failed": 1,
+                "warned": 0,
+                "skipped": 0,
+                "duration_ms": 15.0,
+            }
+        ],
+        "total_failed": 1,
+        "score": 50,
+    }
+    html = render_check_html(data)
+    assert "FAIL" in html
+    assert "init response" in html
+    assert "timeout" in html

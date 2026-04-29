@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.3.0 (2026-04-30)
+
+### Features
+- **Security suite** — 5 offline checks scanning tool descriptions for vulnerabilities:
+  - Prompt injection patterns (IMPORTANT tags, IGNORE PREVIOUS, hidden instructions, imperatives)
+  - Data exfiltration references (sensitive file paths, credential-reading instructions)
+  - Cross-tool manipulation (tool shadowing, override instructions)
+  - Suspicious encoding (base64-encoded instructions, zero-width characters, HTML entities)
+  - Tool pin verification for rug pull detection
+- `halflist pin` command — snapshot tool definition SHA-256 hashes for change detection
+  - Stores pins in `~/.halflist/pins/<server-name>.json`
+  - `--verify-pins` flag on `check` and `audit` to compare against saved snapshot
+  - Custom output path via `-o`
+- **HTML report generation** — `halflist report --format html`
+  - Self-contained single file with inline CSS, no external dependencies
+  - Dark theme, SVG donut gauge for score, CSS-only collapsible suite sections
+  - Horizontal bar charts for benchmark latency with color coding
+  - Supports all three report types: check, bench, audit
+
+### Improvements
+- Warmup failure detection in benchmarks — tools where all warmup calls fail are reported as "skipped (args rejected)" instead of "all failed"
+  - Terminal: dim styled row; JSON: `"skipped": true, "skip_reason": "all warmup calls failed"`
+  - Summary line shows benchmarked and skipped counts separately
+- Score suppressed on filtered suite runs (`--suite`) — partial runs don't represent full server health
+  - Terminal verdict shows PASS/FAIL without score; JSON still includes computed score
+  - Full check (no filter) and audit always show score
+- Sub-millisecond latencies display as `<1ms` instead of `0ms` across terminal, markdown, and HTML
+- Imperative sentence threshold raised from 5 to 8 to reduce false positives on legitimate servers
+- Cross-tool manipulation patterns split into specific (per-tool-name) and generic (once-per-tool) to eliminate false positive multiplication
+- `benchmarked_count` and `total_calls` in bench/audit reports now exclude skipped tools
+
+### Bug Fixes
+- Pin file structure mismatch — security suite now correctly reads nested `tool_hashes` from PinData format
+- Server names containing `/` no longer crash pin file operations — sanitized to `_` in file paths
+- Cross-tool manipulation no longer reports N-1 false positives for generic patterns
+- `BenchLiveProgress` handles skipped tools without crashing
+
 ## 0.2.0 (2026-04-28)
 
 ### Added

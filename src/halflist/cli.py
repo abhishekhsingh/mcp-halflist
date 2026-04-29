@@ -24,7 +24,10 @@ console = Console()
 
 def version_callback(value: bool) -> None:
     if value:
-        console.print(f"halflist v{__version__}")
+        console.print(
+            f"[bold]halflist[/bold] v{__version__}"
+            f" · [dim]Lint your MCP server before your users do.[/dim]"
+        )
         raise typer.Exit()
 
 
@@ -50,6 +53,7 @@ def check(
         False, "--quiet", "-q", help="Suppress server stderr output. Auto-enabled with --format json."
     ),
     timeout: int = typer.Option(30, "--timeout", help="Timeout in seconds per operation."),
+    verify_pins: bool = typer.Option(False, "--verify-pins", help="Verify tool pins against saved snapshot."),
 ) -> None:
     """Run conformance checks against an MCP server."""
     if format not in ("terminal", "json"):
@@ -57,7 +61,9 @@ def check(
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     effective_quiet = quiet or format == "json"
-    exit_code = asyncio.run(_run_checks(stdio, format, suite, verbose, effective_quiet, timeout))
+    exit_code = asyncio.run(
+        _run_checks(stdio, format, suite, verbose, effective_quiet, timeout, verify_pins)
+    )
     raise typer.Exit(exit_code)
 
 
@@ -68,6 +74,7 @@ async def _run_checks(
     verbose: bool,
     quiet: bool,
     timeout: int,
+    verify_pins: bool = False,
 ) -> int:
     from rich.live import Live
 
@@ -81,6 +88,7 @@ async def _run_checks(
         render_json,
     )
     from halflist.suites.handshake import HandshakeSuite
+    from halflist.suites.security import SecuritySuite
     from halflist.suites.tools import ToolsSuite
 
     is_json = format == "json"
@@ -110,9 +118,10 @@ async def _run_checks(
 
         print_connection(progress_console, server_info, len(tools))
 
-        all_suites_map = {
+        all_suites_map: dict[str, type] = {
             "handshake": HandshakeSuite,
             "tools": ToolsSuite,
+            "security": SecuritySuite,
         }
 
         if suite_filter:
@@ -140,7 +149,12 @@ async def _run_checks(
                     _progress.add_check(check)
                     _live.refresh()
 
-                suite_instance = suite_cls(client, on_check=on_check)
+                if suite_cls is SecuritySuite:
+                    suite_instance = SecuritySuite(
+                        client, on_check=on_check, verify_pins=verify_pins
+                    )
+                else:
+                    suite_instance = suite_cls(client, on_check=on_check)
                 result = await suite_instance.run()
                 suite_results.append(result)
 
@@ -153,7 +167,7 @@ async def _run_checks(
         if is_json:
             print(render_json(report))
         else:
-            render_final_report(console, report, verbose)
+            render_final_report(console, report, verbose, is_filtered=bool(suite_filter))
 
         if report.total_failed > 0:
             return EXIT_FAILURE
@@ -267,14 +281,17 @@ async def _run_bench(
 
                 result = await bench_tool(client, t, iterations, warmup, on_call=on_call)
                 benchmarks.append(result)
-                progress.set_p50(t.name, result.median_ms)
+                if result.skipped:
+                    progress.set_skipped(t.name)
+                else:
+                    progress.set_p50(t.name, result.median_ms)
                 live.refresh()
 
             progress.set_current(None)
             live.refresh()
 
         total_duration = (time.monotonic() - bench_start) * 1000 + connection_ms + discovery_ms
-        total_calls = sum(b.iterations for b in benchmarks)
+        total_calls = sum(b.iterations for b in benchmarks if not b.skipped)
 
         report = BenchReport(
             version=__version__,
@@ -286,7 +303,7 @@ async def _run_bench(
             connection_ms=round(connection_ms, 2),
             discovery_ms=round(discovery_ms, 2),
             tool_count=len(all_tool_list),
-            benchmarked_count=len(selected),
+            benchmarked_count=sum(1 for b in benchmarks if not b.skipped),
             iterations=iterations,
             warmup=warmup,
             benchmarks=benchmarks,
@@ -319,6 +336,7 @@ def audit(
         False, "--quiet", "-q", help="Suppress server stderr output. Auto-enabled with --format json."
     ),
     timeout: int = typer.Option(30, "--timeout", help="Timeout in seconds per operation."),
+    verify_pins: bool = typer.Option(False, "--verify-pins", help="Verify tool pins against saved snapshot."),
 ) -> None:
     """Run full conformance check + benchmark in one shot."""
     if format not in ("terminal", "json"):
@@ -327,7 +345,7 @@ def audit(
 
     effective_quiet = quiet or format == "json"
     exit_code = asyncio.run(
-        _run_audit(stdio, iterations, warmup, verbose, format, effective_quiet, timeout)
+        _run_audit(stdio, iterations, warmup, verbose, format, effective_quiet, timeout, verify_pins)
     )
     raise typer.Exit(exit_code)
 
@@ -340,6 +358,7 @@ async def _run_audit(
     format: str,
     quiet: bool,
     timeout: int,
+    verify_pins: bool = False,
 ) -> int:
     import time
     from datetime import datetime, timezone
@@ -358,6 +377,7 @@ async def _run_audit(
         render_audit_report,
     )
     from halflist.suites.handshake import HandshakeSuite
+    from halflist.suites.security import SecuritySuite
     from halflist.suites.tools import ToolsSuite
 
     is_json = format == "json"
@@ -392,9 +412,10 @@ async def _run_audit(
         print_connection(progress_console, server_info, len(all_tools))
 
         # ── Phase 2a: Conformance checks ───────────────────────────────────
-        all_suites_map = {
+        all_suites_map: dict[str, type] = {
             "handshake": HandshakeSuite,
             "tools": ToolsSuite,
+            "security": SecuritySuite,
         }
 
         suite_results: list[SuiteResult] = []
@@ -412,7 +433,12 @@ async def _run_audit(
                     _progress.add_check(check)
                     _live.refresh()
 
-                suite_instance = suite_cls(client, on_check=on_check)
+                if suite_cls is SecuritySuite:
+                    suite_instance = SecuritySuite(
+                        client, on_check=on_check, verify_pins=verify_pins
+                    )
+                else:
+                    suite_instance = suite_cls(client, on_check=on_check)
                 result = await suite_instance.run()
                 suite_results.append(result)
 
@@ -442,14 +468,17 @@ async def _run_audit(
 
                     bm_result = await bench_tool(client, t, iterations, warmup, on_call=on_call)
                     benchmarks.append(bm_result)
-                    bench_progress.set_p50(t.name, bm_result.median_ms)
+                    if bm_result.skipped:
+                        bench_progress.set_skipped(t.name)
+                    else:
+                        bench_progress.set_p50(t.name, bm_result.median_ms)
                     live.refresh()
 
                 bench_progress.set_current(None)
                 live.refresh()
 
         total_duration = (time.monotonic() - t0) * 1000
-        total_calls = sum(b.iterations for b in benchmarks)
+        total_calls = sum(b.iterations for b in benchmarks if not b.skipped)
 
         report = AuditReport(
             version=__version__,
@@ -464,7 +493,7 @@ async def _run_audit(
             connection_ms=round(connection_ms, 2),
             discovery_ms=round(discovery_ms, 2),
             tool_count=len(all_tools),
-            benchmarked_count=len(benchmarks),
+            benchmarked_count=sum(1 for b in benchmarks if not b.skipped),
             iterations=iterations,
             warmup=warmup,
             benchmarks=benchmarks,
@@ -582,20 +611,27 @@ async def _run_watch(
 @app.command()
 def report(
     json_file: Path = typer.Argument(..., help="Path to a halflist JSON report file."),
-    format: str = typer.Option("markdown", "--format", help="Output format: markdown."),
+    format: str = typer.Option("markdown", "--format", help="Output format: markdown or html."),
     badge: bool = typer.Option(False, "--badge", help="Generate an SVG badge instead."),
     output: Optional[str] = typer.Option(None, "-o", "--output", help="Write output to file."),
 ) -> None:
-    """Generate markdown or badge from a halflist JSON report."""
+    """Generate markdown, HTML, or badge from a halflist JSON report."""
     import json
 
     from halflist.report import (
         detect_report_type,
+        render_audit_html,
         render_audit_markdown,
         render_badge_svg,
+        render_bench_html,
         render_bench_markdown,
+        render_check_html,
         render_check_markdown,
     )
+
+    if format not in ("markdown", "html"):
+        console.print(f"[red]Error:[/red] Unknown format '{format}'. Use 'markdown' or 'html'.")
+        raise typer.Exit(EXIT_CONFIG_ERROR)
 
     if not json_file.exists():
         console.print(f"[red]Error:[/red] File not found: {json_file}")
@@ -611,18 +647,104 @@ def report(
         result = render_badge_svg(data)
     else:
         report_type = detect_report_type(data)
-        if report_type == "check":
-            result = render_check_markdown(data)
-        elif report_type == "bench":
-            result = render_bench_markdown(data)
-        elif report_type == "audit":
-            result = render_audit_markdown(data)
-        else:
+        renderers = {
+            "markdown": {"check": render_check_markdown, "bench": render_bench_markdown, "audit": render_audit_markdown},
+            "html": {"check": render_check_html, "bench": render_bench_html, "audit": render_audit_html},
+        }
+        renderer = renderers[format].get(report_type)
+        if renderer is None:
             console.print("[red]Error:[/red] Unrecognized report format.")
             raise typer.Exit(EXIT_CONFIG_ERROR)
+        result = renderer(data)
 
     if output:
         Path(output).write_text(result)
         console.print(f"  Written to {output}")
     else:
         print(result, end="")
+
+
+# ── pin ───────────────────────────────────────────────────────────────────────
+
+
+@app.command()
+def pin(
+    stdio: str = typer.Option(..., "--stdio", help="Command to launch the MCP server via stdio."),
+    output: Optional[str] = typer.Option(None, "-o", "--output", help="Write pin file to custom path."),
+    quiet: bool = typer.Option(
+        False, "--quiet", "-q", help="Suppress server stderr output."
+    ),
+    timeout: int = typer.Option(30, "--timeout", help="Timeout in seconds per operation."),
+) -> None:
+    """Snapshot tool definitions for change detection."""
+    exit_code = asyncio.run(_run_pin(stdio, output, quiet, timeout))
+    raise typer.Exit(exit_code)
+
+
+async def _run_pin(
+    command: str,
+    output_path: str | None,
+    quiet: bool,
+    timeout: int,
+) -> int:
+    import hashlib
+    import json
+    from datetime import datetime, timezone
+
+    from halflist.client import HalflistClient
+    from halflist.models import PinData
+
+    client = HalflistClient(timeout=timeout, quiet=quiet)
+
+    try:
+        with console.status("[bold blue]Connecting to server via stdio...[/bold blue]"):
+            try:
+                await client.connect_stdio(command)
+                server_info = await client.initialize()
+            except Exception as e:
+                console.print(f"\n  [red]✗[/red] Connection failed: {e}")
+                return EXIT_TRANSPORT_ERROR
+
+        try:
+            tools = await client.list_tools()
+        except Exception as e:
+            console.print(f"  [red]✗[/red] Could not list tools: {e}")
+            return EXIT_FAILURE
+
+        tool_hashes: dict[str, str] = {}
+        for t in tools:
+            payload = json.dumps(
+                {
+                    "name": t.name,
+                    "description": t.description,
+                    "inputSchema": t.inputSchema,
+                },
+                sort_keys=True,
+            )
+            tool_hashes[t.name] = hashlib.sha256(payload.encode()).hexdigest()
+
+        pin_data = PinData(
+            server_name=server_info.name,
+            server_version=server_info.version,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            tool_hashes=tool_hashes,
+        )
+
+        if output_path:
+            pin_file = Path(output_path)
+        else:
+            pins_dir = Path.home() / ".halflist" / "pins"
+            pins_dir.mkdir(parents=True, exist_ok=True)
+            safe_name = server_info.name.replace("/", "_").replace("\\", "_")
+            pin_file = pins_dir / f"{safe_name}.json"
+
+        pin_file.write_text(pin_data.model_dump_json(indent=2) + "\n")
+
+        console.print(
+            f"  [green]✓[/green] Pinned {len(tool_hashes)} tools"
+            f" from [bold]{server_info.name}[/bold] v{server_info.version}"
+        )
+        console.print(f"  [dim]Saved to {pin_file}[/dim]")
+        return EXIT_OK
+    finally:
+        await client.close()

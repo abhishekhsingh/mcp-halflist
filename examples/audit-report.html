@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mcp-halflist — mcp-servers/everything — Audit</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:#0d1117;color:#c9d1d9;line-height:1.5;padding:2rem}
+.container{max-width:900px;margin:0 auto}
+h1{font-size:1.5rem;margin-bottom:.25rem}
+.subtitle{color:#8b949e;font-size:.875rem;margin-bottom:1.5rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:1.25rem;margin-bottom:1rem}
+.card h2{font-size:1.1rem;margin-bottom:.75rem;color:#e6edf3}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.5rem .75rem;margin-bottom:1rem}
+.meta-item{font-size:.875rem}.meta-label{color:#8b949e}.meta-value{color:#e6edf3;font-weight:600}
+.gauge-wrap{display:flex;align-items:center;gap:1.5rem;margin-bottom:1rem}
+.gauge{position:relative;width:100px;height:100px}
+.gauge svg{transform:rotate(-90deg)}
+.gauge-bg{fill:none;stroke:#30363d;stroke-width:8}
+.gauge-fg{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+.gauge-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:1.5rem;font-weight:700}
+.verdict{font-size:1.25rem;font-weight:700}
+.pass{color:#3fb950}.fail{color:#f85149}.warn{color:#d29922}.skip{color:#8b949e}
+details{margin-bottom:.5rem}
+summary{cursor:pointer;padding:.5rem .75rem;background:#21262d;border-radius:6px;
+  font-weight:600;font-size:.9rem;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"\25B6";display:inline-block;margin-right:.5rem;font-size:.7rem;
+  transition:transform .15s}
+details[open]>summary::before{transform:rotate(90deg)}
+.check-list{padding:.5rem .75rem}
+.check-row{display:flex;align-items:baseline;gap:.5rem;padding:.25rem 0;font-size:.875rem;
+  border-bottom:1px solid #21262d}
+.check-row:last-child{border-bottom:none}
+.check-icon{width:1.2em;text-align:center;flex-shrink:0}
+.check-name{flex:1}.check-msg{color:#8b949e;text-align:right;max-width:50%;word-break:break-word}
+table{width:100%;border-collapse:collapse;font-size:.875rem}
+th{text-align:left;padding:.5rem .75rem;border-bottom:2px solid #30363d;color:#8b949e;font-weight:600}
+td{padding:.5rem .75rem;border-bottom:1px solid #21262d}
+.bar-cell{width:40%}
+.bar-wrap{background:#21262d;border-radius:3px;height:18px;position:relative;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .4s ease}
+.bar-label{position:absolute;right:6px;top:0;line-height:18px;font-size:.75rem;color:#e6edf3}
+.summary-row{display:flex;gap:1.5rem;flex-wrap:wrap;font-size:.875rem;color:#8b949e;margin-top:.75rem}
+.footer{text-align:center;color:#484f58;font-size:.75rem;margin-top:2rem}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>mcp-halflist</h1>
+<p class="subtitle">Lint your MCP server before your users do.</p>
+<div class="card"><div class="gauge-wrap"><div class="gauge"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="gauge-bg"/><circle cx="50" cy="50" r="42" class="gauge-fg" stroke="#3fb950" stroke-dasharray="263.9" stroke-dashoffset="5.3"/></svg><div class="gauge-text" style="color:#3fb950">98</div></div>
+<div><div class="verdict pass">PASS</div>
+<div class="meta-item"><span class="meta-value">mcp-servers/everything</span> v2.0.0</div>
+<div class="meta-item">122.1s total</div></div></div>
+<div class="meta-grid"><div class="meta-item"><span class="meta-label">Transport:</span> <span class="meta-value">stdio</span></div><div class="meta-item"><span class="meta-label">Passed:</span> <span class="meta-value pass">21</span></div><div class="meta-item"><span class="meta-label">Failed:</span> <span class="meta-value fail">0</span></div><div class="meta-item"><span class="meta-label">Warnings:</span> <span class="meta-value warn">0</span></div><div class="meta-item"><span class="meta-label">Tools:</span> <span class="meta-value">12 of 13</span></div><div class="meta-item"><span class="meta-label">Iterations:</span> <span class="meta-value">10</span></div></div></div>
+<div class="card"><h2>Conformance</h2>
+<details><summary>handshake &mdash; 6/6 passed &middot; 0.0s</summary>
+<div class="check-list"><div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Server responds to initialize</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Protocol version returned</span><span class="check-msg">v2025-11-25</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Capabilities object present</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Server info has name and version</span><span class="check-msg">mcp-servers/everything v2.0.0</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Initialized notification accepted</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Ping returns pong</span><span class="check-msg">1ms</span></div>
+</div></details>
+<details><summary>tools &mdash; 11/11 passed &middot; 0.0s</summary>
+<div class="check-list"><div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">tools/list returns valid array</span><span class="check-msg">13 tools</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">At least 1 tool exists</span><span class="check-msg">13 tools</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Every tool has a non-empty name</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Every tool has a description</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">inputSchema contains &quot;type&quot;: &quot;object&quot;</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">No duplicate tool names</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Tool names follow recommended pattern</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">tools/call echo returns valid response</span><span class="check-msg">2ms</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">tools/call echo with empty args handles gracefully</span><span class="check-msg">isError=True, 1ms</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Response content is a list</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Each content item has a type field</span><span class="check-msg">PASS</span></div>
+</div></details>
+<details><summary>security &mdash; 4/5 passed &middot; 0.0s</summary>
+<div class="check-list"><div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Prompt injection scan</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Data exfiltration references</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Cross-tool manipulation</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Suspicious encoding</span><span class="check-msg">PASS</span></div>
+<div class="check-row"><span class="check-icon skip">&mdash;</span><span class="check-name">Tool pin verification</span><span class="check-msg">Pin verification not requested</span></div>
+</div></details>
+</div>
+<div class="card"><h2>Latency per Tool</h2>
+<table><thead><tr><th>Tool</th><th>p50</th><th>p95</th><th>p99</th><th>min</th><th>max</th><th>p99 bar</th></tr></thead><tbody>
+<tr><td>echo</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#3fb950"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-annotated-message</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#3fb950"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-env</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#3fb950"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-resource-links</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#3fb950"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-resource-reference</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#3fb950"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-structured-content</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#3fb950"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-sum</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#3fb950"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-tiny-image</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#3fb950"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>gzip-file-as-resource</td><td>20ms</td><td>22ms</td><td>22ms</td><td>19ms</td><td>22ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#3fb950"></div><div class="bar-label">22ms</div></div></td></tr>
+<tr><td>toggle-simulated-logging</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#3fb950"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>toggle-subscriber-updates</td><td>&lt;1ms</td><td>1ms</td><td>1ms</td><td>&lt;1ms</td><td>1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#3fb950"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>trigger-long-running-operation</td><td>10010ms</td><td>10016ms</td><td>10016ms</td><td>10006ms</td><td>10016ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:100%;background:#f85149"></div><div class="bar-label">10016ms</div></div></td></tr>
+<tr style="color:#8b949e"><td>simulate-research-query</td><td colspan="6" style="font-style:italic">skipped (args rejected)</td></tr>
+</tbody></table>
+</div>
+
+<p class="footer">Generated by mcp-halflist v0.3.0</p>
+</div>
+</body>
+</html>
