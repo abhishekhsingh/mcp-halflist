@@ -64,6 +64,7 @@ async def bench_tool(
             p95_ms=0, p99_ms=0, errors=errors,
         )
 
+    raw_latencies = [round(v, 2) for v in latencies]
     latencies.sort()
     quantiles = statistics.quantiles(latencies, n=100) if len(latencies) >= 2 else latencies
     p95_idx = min(94, len(quantiles) - 1) if quantiles else 0
@@ -83,6 +84,7 @@ async def bench_tool(
         p95_ms=round(min(p95_raw, max_val), 2),
         p99_ms=round(min(p99_raw, max_val), 2),
         errors=errors,
+        latencies=raw_latencies,
     )
 
 

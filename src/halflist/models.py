@@ -53,6 +53,7 @@ class ToolBenchmark(BaseModel):
     errors: int = 0
     skipped: bool = False
     skip_reason: str | None = None
+    latencies: list[float] = []
 
 
 class BenchReport(BaseModel):

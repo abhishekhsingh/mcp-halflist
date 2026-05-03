@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mcp-halflist — mcp-servers/everything — Benchmark</title>
+<style>
+:root{
+  --bg:#0a0a0a;--surface:#111111;--border:#1a1a1a;
+  --green:#00ff41;--green-light:#33ff66;--green-dim:#4a7a4a;
+  --red:#ff0040;--amber:#ffaa00;--gray:#555555;--cyan:#00ccff;
+  --text:#c0c0c0;
+  --font-mono:'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+  --font-sans:'Inter',-apple-system,system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--text);line-height:1.6;padding:2rem}
+.container{max-width:900px;margin:0 auto}
+
+.header{text-align:center;margin-bottom:2rem}
+.logo{font-family:var(--font-mono);color:var(--green);font-size:1.5rem;font-weight:700;letter-spacing:.15em;margin-bottom:.5rem}
+.tagline{color:var(--green-dim);font-size:.875rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.25rem;margin-bottom:1rem}
+.card h2{font-family:var(--font-mono);font-size:1rem;margin-bottom:.75rem;color:var(--green-dim);text-transform:uppercase;letter-spacing:.05em}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.5rem .75rem;margin-bottom:1rem;font-family:var(--font-mono);font-size:.85rem}
+.meta-item{display:flex;gap:.5rem}.meta-label{color:var(--green-dim);text-transform:uppercase;min-width:7em}.meta-value{color:var(--text);font-weight:600}
+.gauge-wrap{display:flex;align-items:center;gap:1.5rem;margin-bottom:1rem}
+.gauge{position:relative;width:100px;height:100px}
+.gauge svg{transform:rotate(-90deg)}
+.gauge-bg{fill:none;stroke:var(--border);stroke-width:8}
+.gauge-fg{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+.gauge-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:1.5rem;font-weight:700}
+.verdict{font-family:var(--font-mono);font-size:1.25rem;font-weight:700}
+.pass{color:var(--green)}.fail{color:var(--red)}.warn{color:var(--amber)}.skip{color:var(--gray)}
+details{margin-bottom:.5rem}
+summary{cursor:pointer;padding:.5rem .75rem;background:var(--bg);border:1px solid var(--border);border-radius:4px;
+  font-family:var(--font-mono);font-weight:600;font-size:.85rem;list-style:none;color:var(--text)}
+summary:hover{border-color:var(--green-dim)}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"\25B6";display:inline-block;margin-right:.5rem;font-size:.65rem;
+  color:var(--green-dim);transition:transform .15s}
+details[open]>summary::before{transform:rotate(90deg)}
+.check-list{padding:.5rem 0}
+.check-row{display:flex;align-items:baseline;gap:.5rem;padding:.35rem .75rem;font-family:var(--font-mono);
+  font-size:.8rem;border-radius:3px;transition:background .1s}
+.check-row:hover{background:#151515}
+.check-icon{width:1.2em;text-align:center;flex-shrink:0}
+.check-name{flex:1;color:var(--text)}
+.dot-leader{flex:1;border-bottom:1px dotted #333333;margin:0 .5rem;min-width:2rem;align-self:center}
+.check-msg{color:var(--gray);text-align:right;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:.8rem}
+th{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--border);color:var(--green-dim);
+  font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+td{padding:.5rem .75rem;border-bottom:1px solid var(--border);color:var(--text)}
+tr:hover td{background:#151515}
+.bar-cell{width:35%}
+.bar-wrap{background:var(--border);border-radius:2px;height:16px;position:relative;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px;transition:width .4s ease}
+.bar-label{position:absolute;right:6px;top:0;line-height:16px;font-size:.7rem;color:var(--text)}
+.summary-row{display:flex;gap:1.5rem;flex-wrap:wrap;font-family:var(--font-mono);font-size:.8rem;color:var(--green-dim);margin-top:.75rem}
+.footer{text-align:center;color:var(--green-dim);font-family:var(--font-mono);font-size:.75rem;margin-top:2rem}
+.footer a{color:var(--cyan);text-decoration:none}.footer a:hover{text-decoration:underline}
+.scanline{position:fixed;top:0;left:0;width:100%;height:2px;background:var(--green);
+  pointer-events:none;z-index:9999;animation:scanline 2s ease-out forwards}
+@keyframes scanline{0%{top:0;opacity:.3}100%{top:100%;opacity:0}}
+@media print{
+  body{background:#fff;color:#000}
+  .scanline,.topnav{display:none}
+  .card{background:#fafafa;border-color:#ddd}
+  .pass{color:#16a34a}.fail{color:#dc2626}.warn{color:#ca8a04}.skip{color:#888}
+  .logo{color:#333}.tagline,.meta-label,.footer{color:#666}
+  .meta-value,.check-name,.verdict{color:#000}
+  th{color:#666;border-color:#ddd}td{border-color:#eee;color:#000}
+  tr:hover td{background:transparent}
+  .check-row:hover{background:transparent}
+  .bar-wrap{background:#eee}
+  details{break-inside:avoid}
+  details[open]{display:block}
+  summary{background:#f5f5f5;border-color:#ddd;color:#000}
+}
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+
+<div class="container">
+<div class="header">
+<div class="logo">HALFLIST</div>
+<p class="tagline">Lint your MCP server before your users do.</p>
+</div>
+<div class="card"><h2>mcp-servers/everything v2.0.0 &mdash; Benchmark</h2>
+<div class="meta-grid"><div class="meta-item"><span class="meta-label">Transport:</span> <span class="meta-value">stdio</span></div><div class="meta-item"><span class="meta-label">Tools:</span> <span class="meta-value">12 of 13</span></div><div class="meta-item"><span class="meta-label">Iterations:</span> <span class="meta-value">5</span></div><div class="meta-item"><span class="meta-label">Connection:</span> <span class="meta-value">885ms</span></div><div class="meta-item"><span class="meta-label">Total:</span> <span class="meta-value">71.3s</span></div></div></div>
+<div class="card"><h2>Latency per Tool</h2>
+<table><thead><tr><th>Tool</th><th>p50</th><th>p95</th><th>p99</th><th>min</th><th>max</th><th>p99 bar</th></tr></thead><tbody>
+<tr><td>echo</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-annotated-message</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-env</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-resource-links</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-resource-reference</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-structured-content</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-sum</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">0ms</div></div></td></tr>
+<tr><td>get-tiny-image</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>gzip-file-as-resource</td><td>24ms</td><td>31ms</td><td>31ms</td><td>23ms</td><td>31ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">31ms</div></div></td></tr>
+<tr><td>toggle-simulated-logging</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">0ms</div></div></td></tr>
+<tr><td>toggle-subscriber-updates</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">0ms</div></div></td></tr>
+<tr><td>trigger-long-running-operation</td><td>10012ms</td><td>10013ms</td><td>10013ms</td><td>10008ms</td><td>10013ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:100%;background:#ff0040"></div><div class="bar-label">10013ms</div></div></td></tr>
+<tr style="color:#555555"><td>simulate-research-query</td><td colspan="6" style="font-style:italic">skipped (args rejected)</td></tr>
+</tbody></table>
+</div>
+
+<p class="footer">Generated by mcp-halflist v0.4.0 · <a href="https://github.com/abhishekhsingh/mcp-halflist">GitHub</a></p>
+</div>
+</body>
+</html>

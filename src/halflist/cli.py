@@ -4,13 +4,13 @@ import asyncio
 import io
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import typer
 from rich.console import Console
 
 from halflist import __version__
-from halflist.constants import EXIT_CONFIG_ERROR, EXIT_FAILURE, EXIT_OK, EXIT_TRANSPORT_ERROR
+from halflist.constants import DEFAULT_TIMEOUT, EXIT_CONFIG_ERROR, EXIT_FAILURE, EXIT_OK, EXIT_TRANSPORT_ERROR
 
 app = typer.Typer(
     name="halflist",
@@ -40,19 +40,163 @@ def main(
     pass
 
 
-# ── check ──────────────────────────────────────────────────────────────────────
+# ── Shared helpers ────────────────────────────────────────────────────────────
+
+
+def _validate_transport(
+    stdio: str | None,
+    http: str | None,
+    header: list[str] | None,
+    oauth_token_url: str | None,
+    oauth_client_id: str | None,
+    oauth_client_secret: str | None,
+) -> int | None:
+    """Validate transport flags. Returns exit code on error, None on success."""
+    if stdio and http:
+        console.print("[red]Error:[/red] --stdio and --http are mutually exclusive.")
+        return EXIT_CONFIG_ERROR
+    if not stdio and not http:
+        console.print("[red]Error:[/red] Provide --stdio or --http.")
+        return EXIT_CONFIG_ERROR
+
+    has_auth = bool(header) or bool(oauth_token_url)
+    if has_auth and stdio:
+        console.print("[red]Error:[/red] --header and --oauth-* flags require --http, not --stdio.")
+        return EXIT_CONFIG_ERROR
+
+    oauth_flags = [oauth_token_url, oauth_client_id, oauth_client_secret]
+    oauth_set = sum(1 for f in oauth_flags if f)
+    if 0 < oauth_set < 3:
+        console.print(
+            "[red]Error:[/red] OAuth requires all of --oauth-token-url, --oauth-client-id, --oauth-client-secret."
+        )
+        return EXIT_CONFIG_ERROR
+
+    return None
+
+
+async def _resolve_headers(
+    header: list[str] | None,
+    oauth_token_url: str | None,
+    oauth_client_id: str | None,
+    oauth_client_secret: str | None,
+    oauth_scope: str | None,
+    progress_console: Console,
+) -> dict[str, str] | None:
+    """Build headers dict from --header and/or --oauth-* flags."""
+    headers: dict[str, str] = {}
+
+    if header:
+        for h in header:
+            if ": " not in h:
+                progress_console.print(f"[red]Error:[/red] Invalid header format: '{h}'. Use 'Key: Value'.")
+                raise typer.Exit(EXIT_CONFIG_ERROR)
+            key, val = h.split(": ", 1)
+            headers[key] = val
+
+    if oauth_token_url and oauth_client_id and oauth_client_secret:
+        from halflist.auth import fetch_oauth_token
+
+        if "Authorization" in headers:
+            progress_console.print("  [yellow]⚠[/yellow] OAuth token takes precedence over --header Authorization")
+
+        try:
+            token = await fetch_oauth_token(
+                oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope,
+            )
+        except Exception as e:
+            progress_console.print(f"[red]Error:[/red] OAuth token fetch failed: {e}")
+            raise typer.Exit(EXIT_TRANSPORT_ERROR)
+
+        headers["Authorization"] = f"Bearer {token}"
+
+    return headers or None
+
+
+async def _connect_client(
+    client: Any,
+    stdio: str | None,
+    http: str | None,
+    headers: dict[str, str] | None,
+) -> None:
+    """Connect client via the appropriate transport."""
+    if stdio:
+        await client.connect_stdio(stdio)
+    else:
+        assert http is not None
+        await client.connect_http(http, headers)
+
+
+async def _discover(
+    client: Any,
+    progress_console: Console | None = None,
+) -> tuple[list, int | None, int | None]:
+    """Discover tools, and optionally resources/prompts counts."""
+    try:
+        tools = await client.list_tools()
+    except Exception as e:
+        tools = []
+        if progress_console:
+            progress_console.print(f"  [yellow]⚠[/yellow] Tool discovery failed: {e}")
+
+    resource_count: int | None = None
+    if client.has_capability("resources"):
+        try:
+            resources = await client.list_resources()
+            resource_count = len(resources)
+        except Exception as e:
+            resource_count = 0
+            if progress_console:
+                progress_console.print(f"  [yellow]⚠[/yellow] Resource discovery failed: {e}")
+
+    prompt_count: int | None = None
+    if client.has_capability("prompts"):
+        try:
+            prompts = await client.list_prompts()
+            prompt_count = len(prompts)
+        except Exception as e:
+            prompt_count = 0
+            if progress_console:
+                progress_console.print(f"  [yellow]⚠[/yellow] Prompt discovery failed: {e}")
+
+    return tools, resource_count, prompt_count
+
+
+def _build_suite_map() -> dict[str, type]:
+    from halflist.suites.handshake import HandshakeSuite
+    from halflist.suites.prompts import PromptsSuite
+    from halflist.suites.resources import ResourcesSuite
+    from halflist.suites.security import SecuritySuite
+    from halflist.suites.tools import ToolsSuite
+
+    return {
+        "handshake": HandshakeSuite,
+        "tools": ToolsSuite,
+        "resources": ResourcesSuite,
+        "prompts": PromptsSuite,
+        "security": SecuritySuite,
+    }
+
+
+# ── check ─────────────────────────────────────────────────────────────────────
 
 
 @app.command()
 def check(
-    stdio: str = typer.Option(..., "--stdio", help="Command to launch the MCP server via stdio."),
+    stdio: Optional[str] = typer.Option(None, "--stdio", help="Command to launch the MCP server via stdio."),
+    http: Optional[str] = typer.Option(None, "--http", help="URL of the MCP server via HTTP."),
+    header: Optional[list[str]] = typer.Option(None, "--header", help="HTTP header (Key: Value). Repeatable."),
+    oauth_token_url: Optional[str] = typer.Option(None, "--oauth-token-url", help="OAuth2 token endpoint URL."),
+    oauth_client_id: Optional[str] = typer.Option(None, "--oauth-client-id", help="OAuth2 client ID."),
+    oauth_client_secret: Optional[str] = typer.Option(None, "--oauth-client-secret", help="OAuth2 client secret."),
+    oauth_scope: Optional[str] = typer.Option(None, "--oauth-scope", help="OAuth2 scope."),
     format: str = typer.Option("terminal", "--format", help="Output format: terminal or json."),
     suite: Optional[list[str]] = typer.Option(None, "--suite", help="Suite(s) to run. Repeatable."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show all check details."),
     quiet: bool = typer.Option(
         False, "--quiet", "-q", help="Suppress server stderr output. Auto-enabled with --format json."
     ),
-    timeout: int = typer.Option(30, "--timeout", help="Timeout in seconds per operation."),
+    timeout: int = typer.Option(DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."),
     verify_pins: bool = typer.Option(False, "--verify-pins", help="Verify tool pins against saved snapshot."),
 ) -> None:
     """Run conformance checks against an MCP server."""
@@ -60,15 +204,28 @@ def check(
         console.print(f"[red]Error:[/red] Unknown format '{format}'. Use 'terminal' or 'json'.")
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
+    err = _validate_transport(stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret)
+    if err is not None:
+        raise typer.Exit(err)
+
     effective_quiet = quiet or format == "json"
     exit_code = asyncio.run(
-        _run_checks(stdio, format, suite, verbose, effective_quiet, timeout, verify_pins)
+        _run_checks(
+            stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope,
+            format, suite, verbose, effective_quiet, timeout, verify_pins,
+        )
     )
     raise typer.Exit(exit_code)
 
 
 async def _run_checks(
-    command: str,
+    stdio: str | None,
+    http: str | None,
+    header: list[str] | None,
+    oauth_token_url: str | None,
+    oauth_client_id: str | None,
+    oauth_client_secret: str | None,
+    oauth_scope: str | None,
     format: str,
     suite_filter: list[str] | None,
     verbose: bool,
@@ -83,23 +240,28 @@ async def _run_checks(
     from halflist.report import (
         LiveProgress,
         build_report,
+        print_banner,
         print_connection,
         render_final_report,
         render_json,
     )
-    from halflist.suites.handshake import HandshakeSuite
     from halflist.suites.security import SecuritySuite
-    from halflist.suites.tools import ToolsSuite
 
     is_json = format == "json"
     progress_console = Console(stderr=True) if is_json and sys.stderr.isatty() else Console(file=io.StringIO()) if is_json else console
     client = HalflistClient(timeout=timeout, quiet=quiet)
 
     try:
-        # ── Phase 1: Connection (spinner) ──────────────────────────────────
-        with progress_console.status("[bold blue]Connecting to server via stdio...[/bold blue]"):
+        if not is_json:
+            print_banner(progress_console)
+
+        headers = await _resolve_headers(
+            header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope, progress_console,
+        )
+
+        with progress_console.status("[bold blue]Connecting to server...[/bold blue]"):
             try:
-                await client.connect_stdio(command)
+                await _connect_client(client, stdio, http, headers)
                 server_info = await client.initialize()
             except Exception as e:
                 if is_json:
@@ -111,18 +273,13 @@ async def _run_checks(
                     console.print(f"\n  [red]✗[/red] Connection failed: {e}")
                 return EXIT_TRANSPORT_ERROR
 
-        try:
-            tools = await client.list_tools()
-        except Exception:
-            tools = []
+        tools, resource_count, prompt_count = await _discover(client, progress_console)
+        print_connection(
+            progress_console, server_info, len(tools),
+            resource_count, prompt_count, client.transport,
+        )
 
-        print_connection(progress_console, server_info, len(tools))
-
-        all_suites_map: dict[str, type] = {
-            "handshake": HandshakeSuite,
-            "tools": ToolsSuite,
-            "security": SecuritySuite,
-        }
+        all_suites_map = _build_suite_map()
 
         if suite_filter:
             for s in suite_filter:
@@ -135,7 +292,6 @@ async def _run_checks(
 
         suite_results: list[SuiteResult] = []
 
-        # ── Phase 2: Live progress ─────────────────────────────────────────
         progress = LiveProgress(list(suites_to_run.keys()))
 
         with Live(
@@ -161,9 +317,8 @@ async def _run_checks(
             progress.set_current(None)
             live.refresh()
 
-        report = build_report(server_info, suite_results)
+        report = build_report(server_info, suite_results, transport=client.transport)
 
-        # ── Phase 3: Final report ──────────────────────────────────────────
         if is_json:
             print(render_json(report))
         else:
@@ -176,12 +331,18 @@ async def _run_checks(
         await client.close()
 
 
-# ── bench ──────────────────────────────────────────────────────────────────────
+# ── bench ─────────────────────────────────────────────────────────────────────
 
 
 @app.command()
 def bench(
-    stdio: str = typer.Option(..., "--stdio", help="Command to launch the MCP server via stdio."),
+    stdio: Optional[str] = typer.Option(None, "--stdio", help="Command to launch the MCP server via stdio."),
+    http: Optional[str] = typer.Option(None, "--http", help="URL of the MCP server via HTTP."),
+    header: Optional[list[str]] = typer.Option(None, "--header", help="HTTP header (Key: Value). Repeatable."),
+    oauth_token_url: Optional[str] = typer.Option(None, "--oauth-token-url", help="OAuth2 token endpoint URL."),
+    oauth_client_id: Optional[str] = typer.Option(None, "--oauth-client-id", help="OAuth2 client ID."),
+    oauth_client_secret: Optional[str] = typer.Option(None, "--oauth-client-secret", help="OAuth2 client secret."),
+    oauth_scope: Optional[str] = typer.Option(None, "--oauth-scope", help="OAuth2 scope."),
     tool: Optional[list[str]] = typer.Option(None, "--tool", help="Tool(s) to benchmark. Repeatable."),
     all_tools: bool = typer.Option(False, "--all", help="Benchmark all tools (default: first 5)."),
     iterations: int = typer.Option(10, "--iterations", "-n", help="Number of iterations per tool."),
@@ -190,22 +351,35 @@ def bench(
     quiet: bool = typer.Option(
         False, "--quiet", "-q", help="Suppress server stderr output. Auto-enabled with --format json."
     ),
-    timeout: int = typer.Option(30, "--timeout", help="Timeout in seconds per operation."),
+    timeout: int = typer.Option(DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."),
 ) -> None:
     """Benchmark latency per tool on an MCP server."""
     if format not in ("terminal", "json"):
         console.print(f"[red]Error:[/red] Unknown format '{format}'. Use 'terminal' or 'json'.")
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
+    err = _validate_transport(stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret)
+    if err is not None:
+        raise typer.Exit(err)
+
     effective_quiet = quiet or format == "json"
     exit_code = asyncio.run(
-        _run_bench(stdio, tool, all_tools, iterations, warmup, format, effective_quiet, timeout)
+        _run_bench(
+            stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope,
+            tool, all_tools, iterations, warmup, format, effective_quiet, timeout,
+        )
     )
     raise typer.Exit(exit_code)
 
 
 async def _run_bench(
-    command: str,
+    stdio: str | None,
+    http: str | None,
+    header: list[str] | None,
+    oauth_token_url: str | None,
+    oauth_client_id: str | None,
+    oauth_client_secret: str | None,
+    oauth_scope: str | None,
     tool_names: list[str] | None,
     bench_all: bool,
     iterations: int,
@@ -215,24 +389,31 @@ async def _run_bench(
     timeout: int,
 ) -> int:
     import time
+    from datetime import datetime, timezone
 
     from rich.live import Live
 
     from halflist.bench import bench_tool, select_tools
     from halflist.client import HalflistClient
     from halflist.models import BenchReport, ToolBenchmark
-    from halflist.report import BenchLiveProgress, print_connection, render_bench_json, render_bench_report
+    from halflist.report import BenchLiveProgress, print_banner, print_connection, render_bench_json, render_bench_report
 
     is_json = format == "json"
     progress_console = Console(stderr=True) if is_json and sys.stderr.isatty() else Console(file=io.StringIO()) if is_json else console
     client = HalflistClient(timeout=timeout, quiet=quiet)
 
     try:
-        # ── Phase 1: Connection ────────────────────────────────────────────
-        with progress_console.status("[bold blue]Connecting to server via stdio...[/bold blue]"):
+        if not is_json:
+            print_banner(progress_console)
+
+        headers = await _resolve_headers(
+            header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope, progress_console,
+        )
+
+        with progress_console.status("[bold blue]Connecting to server...[/bold blue]"):
             try:
                 t0 = time.monotonic()
-                await client.connect_stdio(command)
+                await _connect_client(client, stdio, http, headers)
                 server_info = await client.initialize()
                 connection_ms = (time.monotonic() - t0) * 1000
             except Exception as e:
@@ -248,19 +429,19 @@ async def _run_bench(
         t_disc = time.monotonic()
         try:
             all_tool_list = await client.list_tools()
-        except Exception:
+        except Exception as e:
             all_tool_list = []
+            progress_console.print(f"  [yellow]⚠[/yellow] Tool discovery failed: {e}")
         discovery_ms = (time.monotonic() - t_disc) * 1000
 
         selected = select_tools(all_tool_list, tool_names, bench_all)
 
-        print_connection(progress_console, server_info, len(all_tool_list))
+        print_connection(progress_console, server_info, len(all_tool_list), transport=client.transport)
 
         if not selected:
             progress_console.print("  [yellow]No tools to benchmark.[/yellow]")
             return EXIT_OK
 
-        # ── Phase 2: Benchmarking ──────────────────────────────────────────
         bench_start = time.monotonic()
         benchmarks: list[ToolBenchmark] = []
 
@@ -295,11 +476,9 @@ async def _run_bench(
 
         report = BenchReport(
             version=__version__,
-            timestamp=__import__("datetime").datetime.now(
-                __import__("datetime").timezone.utc
-            ).isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             server_info=server_info,
-            transport="stdio",
+            transport=client.transport,
             connection_ms=round(connection_ms, 2),
             discovery_ms=round(discovery_ms, 2),
             tool_count=len(all_tool_list),
@@ -311,7 +490,6 @@ async def _run_bench(
             total_duration_ms=round(total_duration, 2),
         )
 
-        # ── Phase 3: Report ────────────────────────────────────────────────
         if is_json:
             print(render_bench_json(report))
         else:
@@ -322,12 +500,18 @@ async def _run_bench(
         await client.close()
 
 
-# ── audit ──────────────────────────────────────────────────────────────────────
+# ── audit ─────────────────────────────────────────────────────────────────────
 
 
 @app.command()
 def audit(
-    stdio: str = typer.Option(..., "--stdio", help="Command to launch the MCP server via stdio."),
+    stdio: Optional[str] = typer.Option(None, "--stdio", help="Command to launch the MCP server via stdio."),
+    http: Optional[str] = typer.Option(None, "--http", help="URL of the MCP server via HTTP."),
+    header: Optional[list[str]] = typer.Option(None, "--header", help="HTTP header (Key: Value). Repeatable."),
+    oauth_token_url: Optional[str] = typer.Option(None, "--oauth-token-url", help="OAuth2 token endpoint URL."),
+    oauth_client_id: Optional[str] = typer.Option(None, "--oauth-client-id", help="OAuth2 client ID."),
+    oauth_client_secret: Optional[str] = typer.Option(None, "--oauth-client-secret", help="OAuth2 client secret."),
+    oauth_scope: Optional[str] = typer.Option(None, "--oauth-scope", help="OAuth2 scope."),
     iterations: int = typer.Option(10, "--iterations", "-n", help="Benchmark iterations per tool."),
     warmup: int = typer.Option(2, "--warmup", "-w", help="Warmup iterations (discarded)."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show all check details."),
@@ -335,7 +519,7 @@ def audit(
     quiet: bool = typer.Option(
         False, "--quiet", "-q", help="Suppress server stderr output. Auto-enabled with --format json."
     ),
-    timeout: int = typer.Option(30, "--timeout", help="Timeout in seconds per operation."),
+    timeout: int = typer.Option(DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."),
     verify_pins: bool = typer.Option(False, "--verify-pins", help="Verify tool pins against saved snapshot."),
 ) -> None:
     """Run full conformance check + benchmark in one shot."""
@@ -343,15 +527,28 @@ def audit(
         console.print(f"[red]Error:[/red] Unknown format '{format}'. Use 'terminal' or 'json'.")
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
+    err = _validate_transport(stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret)
+    if err is not None:
+        raise typer.Exit(err)
+
     effective_quiet = quiet or format == "json"
     exit_code = asyncio.run(
-        _run_audit(stdio, iterations, warmup, verbose, format, effective_quiet, timeout, verify_pins)
+        _run_audit(
+            stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope,
+            iterations, warmup, verbose, format, effective_quiet, timeout, verify_pins,
+        )
     )
     raise typer.Exit(exit_code)
 
 
 async def _run_audit(
-    command: str,
+    stdio: str | None,
+    http: str | None,
+    header: list[str] | None,
+    oauth_token_url: str | None,
+    oauth_client_id: str | None,
+    oauth_client_secret: str | None,
+    oauth_scope: str | None,
     iterations: int,
     warmup: int,
     verbose: bool,
@@ -372,24 +569,29 @@ async def _run_audit(
         BenchLiveProgress,
         LiveProgress,
         build_report,
+        print_banner,
         print_connection,
         render_audit_json,
         render_audit_report,
     )
-    from halflist.suites.handshake import HandshakeSuite
     from halflist.suites.security import SecuritySuite
-    from halflist.suites.tools import ToolsSuite
 
     is_json = format == "json"
     progress_console = Console(stderr=True) if is_json and sys.stderr.isatty() else Console(file=io.StringIO()) if is_json else console
     client = HalflistClient(timeout=timeout, quiet=quiet)
 
     try:
-        # ── Phase 1: Connection ────────────────────────────────────────────
-        with progress_console.status("[bold blue]Connecting to server via stdio...[/bold blue]"):
+        if not is_json:
+            print_banner(progress_console)
+
+        headers = await _resolve_headers(
+            header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope, progress_console,
+        )
+
+        with progress_console.status("[bold blue]Connecting to server...[/bold blue]"):
             try:
                 t0 = time.monotonic()
-                await client.connect_stdio(command)
+                await _connect_client(client, stdio, http, headers)
                 server_info = await client.initialize()
                 connection_ms = (time.monotonic() - t0) * 1000
             except Exception as e:
@@ -403,20 +605,16 @@ async def _run_audit(
                 return EXIT_TRANSPORT_ERROR
 
         t_disc = time.monotonic()
-        try:
-            all_tools = await client.list_tools()
-        except Exception:
-            all_tools = []
+        tools, resource_count, prompt_count = await _discover(client, progress_console)
+        all_tools = tools
         discovery_ms = (time.monotonic() - t_disc) * 1000
 
-        print_connection(progress_console, server_info, len(all_tools))
+        print_connection(
+            progress_console, server_info, len(all_tools),
+            resource_count, prompt_count, client.transport,
+        )
 
-        # ── Phase 2a: Conformance checks ───────────────────────────────────
-        all_suites_map: dict[str, type] = {
-            "handshake": HandshakeSuite,
-            "tools": ToolsSuite,
-            "security": SecuritySuite,
-        }
+        all_suites_map = _build_suite_map()
 
         suite_results: list[SuiteResult] = []
 
@@ -445,9 +643,8 @@ async def _run_audit(
             progress.set_current(None)
             live.refresh()
 
-        check_report = build_report(server_info, suite_results)
+        check_report = build_report(server_info, suite_results, transport=client.transport)
 
-        # ── Phase 2b: Benchmarking (all tools) ─────────────────────────────
         benchmarks: list[ToolBenchmark] = []
 
         if all_tools:
@@ -484,7 +681,7 @@ async def _run_audit(
             version=__version__,
             timestamp=datetime.now(timezone.utc).isoformat(),
             server_info=server_info,
-            transport="stdio",
+            transport=client.transport,
             score=check_report.score,
             suites=suite_results,
             total_passed=check_report.total_passed,
@@ -501,7 +698,6 @@ async def _run_audit(
             total_duration_ms=round(total_duration, 2),
         )
 
-        # ── Phase 3: Report ────────────────────────────────────────────────
         if is_json:
             print(render_audit_json(report))
         else:
@@ -514,27 +710,48 @@ async def _run_audit(
         await client.close()
 
 
-# ── watch ──────────────────────────────────────────────────────────────────────
+# ── watch ─────────────────────────────────────────────────────────────────────
 
 
 @app.command()
 def watch(
-    stdio: str = typer.Option(..., "--stdio", help="Command to launch the MCP server via stdio."),
+    stdio: Optional[str] = typer.Option(None, "--stdio", help="Command to launch the MCP server via stdio."),
+    http: Optional[str] = typer.Option(None, "--http", help="URL of the MCP server via HTTP."),
+    header: Optional[list[str]] = typer.Option(None, "--header", help="HTTP header (Key: Value). Repeatable."),
+    oauth_token_url: Optional[str] = typer.Option(None, "--oauth-token-url", help="OAuth2 token endpoint URL."),
+    oauth_client_id: Optional[str] = typer.Option(None, "--oauth-client-id", help="OAuth2 client ID."),
+    oauth_client_secret: Optional[str] = typer.Option(None, "--oauth-client-secret", help="OAuth2 client secret."),
+    oauth_scope: Optional[str] = typer.Option(None, "--oauth-scope", help="OAuth2 scope."),
     interval: int = typer.Option(60, "--interval", "-i", help="Seconds between probes."),
     count: Optional[int] = typer.Option(None, "--count", "-c", help="Number of probes (default: infinite)."),
     log: Optional[str] = typer.Option(None, "--log", "-l", help="Append JSONL probes to this file."),
     quiet: bool = typer.Option(
         False, "--quiet", "-q", help="Suppress server stderr output."
     ),
-    timeout: int = typer.Option(30, "--timeout", help="Timeout in seconds per operation."),
+    timeout: int = typer.Option(DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."),
 ) -> None:
     """Continuously monitor an MCP server's health."""
-    exit_code = asyncio.run(_run_watch(stdio, interval, count, log, quiet, timeout))
+    err = _validate_transport(stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret)
+    if err is not None:
+        raise typer.Exit(err)
+
+    exit_code = asyncio.run(
+        _run_watch(
+            stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope,
+            interval, count, log, quiet, timeout,
+        )
+    )
     raise typer.Exit(exit_code)
 
 
 async def _run_watch(
-    command: str,
+    stdio: str | None,
+    http: str | None,
+    header: list[str] | None,
+    oauth_token_url: str | None,
+    oauth_client_id: str | None,
+    oauth_client_secret: str | None,
+    oauth_scope: str | None,
     interval: int,
     count: int | None,
     log_path: str | None,
@@ -546,14 +763,20 @@ async def _run_watch(
     from rich.live import Live
     from rich.text import Text
 
-    from halflist.report import _SPINNER_FRAMES
+    from halflist.report import _SPINNER_FRAMES, print_banner
     from halflist.watch import run_probe
 
-    STATUS_STYLE = {
-        "ok": "[green]ok[/green]",
-        "degraded": "[yellow]degraded[/yellow]",
-        "down": "[red]down[/red]",
+    _WATCH_STATUS = {
+        "ok": ("OK", "green"),
+        "degraded": ("DEGRADED", "yellow"),
+        "down": ("DOWN", "red"),
     }
+
+    print_banner(console)
+
+    headers = await _resolve_headers(
+        header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope, console,
+    )
 
     log_file = None
     if log_path:
@@ -563,7 +786,9 @@ async def _run_watch(
         probe_num = 0
         while True:
             probe_start = time.monotonic()
-            probe_task = asyncio.create_task(run_probe(command, quiet, timeout))
+            probe_task = asyncio.create_task(
+                run_probe(stdio=stdio, http_url=http, headers=headers, quiet=quiet, timeout=timeout)
+            )
             frame = 0
 
             with Live(Text(""), console=console, transient=True, refresh_per_second=12) as live:
@@ -577,23 +802,29 @@ async def _run_watch(
             probe = probe_task.result()
             probe_json = probe.model_dump_json()
 
-            styled_status = STATUS_STYLE.get(probe.status, probe.status)
-            ts_short = probe.timestamp[:19] if "T" in probe.timestamp else probe.timestamp
-            detail = ""
-            if probe.connection_ms is not None:
-                detail += f"  conn={probe.connection_ms:.0f}ms"
-            if probe.tool_count is not None:
-                detail += f"  tools={probe.tool_count}"
-            if probe.error:
-                detail += f"  error={probe.error}"
+            probe_num += 1
+            label, color = _WATCH_STATUS.get(probe.status, (probe.status.upper(), "white"))
+            ts_short = probe.timestamp[11:19] if "T" in probe.timestamp else probe.timestamp
 
-            console.print(f"  [{ts_short}]  {styled_status}  {probe.probe_duration_ms:.0f}ms{detail}")
+            line = Text(f"  #{probe_num:<3} ")
+            line.append(f"[{ts_short}]  ", style="dim")
+            line.append("██", style=color)
+            line.append(f" {label:<11}", style=f"bold {color}")
+            dur_s = probe.probe_duration_ms / 1000
+            line.append(f"{dur_s:.1f}s", style="dim")
+            if probe.connection_ms is not None:
+                line.append(f"  conn={probe.connection_ms:.0f}ms", style="dim")
+            if probe.tool_count is not None:
+                line.append(f"  tools={probe.tool_count}", style="dim")
+            if probe.error:
+                line.append(f"  {probe.error}", style="dim red")
+
+            console.print(line)
 
             if log_file:
                 log_file.write(probe_json + "\n")
                 log_file.flush()
 
-            probe_num += 1
             if count is not None and probe_num >= count:
                 break
 
@@ -605,7 +836,7 @@ async def _run_watch(
             log_file.close()
 
 
-# ── report ─────────────────────────────────────────────────────────────────────
+# ── report ────────────────────────────────────────────────────────────────────
 
 
 @app.command()
@@ -664,25 +895,46 @@ def report(
         print(result, end="")
 
 
-# ── pin ───────────────────────────────────────────────────────────────────────
+# ── pin ──────────────────────────────────────────────────────────────────────
 
 
 @app.command()
 def pin(
-    stdio: str = typer.Option(..., "--stdio", help="Command to launch the MCP server via stdio."),
+    stdio: Optional[str] = typer.Option(None, "--stdio", help="Command to launch the MCP server via stdio."),
+    http: Optional[str] = typer.Option(None, "--http", help="URL of the MCP server via HTTP."),
+    header: Optional[list[str]] = typer.Option(None, "--header", help="HTTP header (Key: Value). Repeatable."),
+    oauth_token_url: Optional[str] = typer.Option(None, "--oauth-token-url", help="OAuth2 token endpoint URL."),
+    oauth_client_id: Optional[str] = typer.Option(None, "--oauth-client-id", help="OAuth2 client ID."),
+    oauth_client_secret: Optional[str] = typer.Option(None, "--oauth-client-secret", help="OAuth2 client secret."),
+    oauth_scope: Optional[str] = typer.Option(None, "--oauth-scope", help="OAuth2 scope."),
     output: Optional[str] = typer.Option(None, "-o", "--output", help="Write pin file to custom path."),
     quiet: bool = typer.Option(
         False, "--quiet", "-q", help="Suppress server stderr output."
     ),
-    timeout: int = typer.Option(30, "--timeout", help="Timeout in seconds per operation."),
+    timeout: int = typer.Option(DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."),
 ) -> None:
     """Snapshot tool definitions for change detection."""
-    exit_code = asyncio.run(_run_pin(stdio, output, quiet, timeout))
+    err = _validate_transport(stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret)
+    if err is not None:
+        raise typer.Exit(err)
+
+    exit_code = asyncio.run(
+        _run_pin(
+            stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope,
+            output, quiet, timeout,
+        )
+    )
     raise typer.Exit(exit_code)
 
 
 async def _run_pin(
-    command: str,
+    stdio: str | None,
+    http: str | None,
+    header: list[str] | None,
+    oauth_token_url: str | None,
+    oauth_client_id: str | None,
+    oauth_client_secret: str | None,
+    oauth_scope: str | None,
     output_path: str | None,
     quiet: bool,
     timeout: int,
@@ -693,13 +945,20 @@ async def _run_pin(
 
     from halflist.client import HalflistClient
     from halflist.models import PinData
+    from halflist.report import print_banner
 
     client = HalflistClient(timeout=timeout, quiet=quiet)
 
     try:
-        with console.status("[bold blue]Connecting to server via stdio...[/bold blue]"):
+        print_banner(console)
+
+        headers = await _resolve_headers(
+            header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope, console,
+        )
+
+        with console.status("[bold blue]Connecting to server...[/bold blue]"):
             try:
-                await client.connect_stdio(command)
+                await _connect_client(client, stdio, http, headers)
                 server_info = await client.initialize()
             except Exception as e:
                 console.print(f"\n  [red]✗[/red] Connection failed: {e}")

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from halflist.models import SuiteResult
 from halflist.suites.base import CheckSuite
 
 
 class HandshakeSuite(CheckSuite):
     name = "handshake"
 
-    async def run(self):
+    async def run(self) -> SuiteResult:
         start = self.measure()
 
         result = self.client.init_result

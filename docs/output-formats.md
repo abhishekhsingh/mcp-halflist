@@ -59,8 +59,8 @@ Available on `check`, `bench`, and `audit` commands.
 **check** produces a `HalflistReport`:
 ```json
 {
-  "version": "0.3.0",
-  "timestamp": "2026-04-29T...",
+  "version": "0.4.0",
+  "timestamp": "2026-05-03T...",
   "server_info": { "name": "...", "version": "..." },
   "transport": "stdio",
   "suites": [...],
@@ -75,8 +75,8 @@ Available on `check`, `bench`, and `audit` commands.
 **bench** produces a `BenchReport`:
 ```json
 {
-  "version": "0.3.0",
-  "timestamp": "2026-04-29T...",
+  "version": "0.4.0",
+  "timestamp": "2026-05-03T...",
   "server_info": { "name": "...", "version": "..." },
   "transport": "stdio",
   "connection_ms": 1200.5,
@@ -140,19 +140,24 @@ halflist report results.json --format html -o report.html
 
 ### Features
 
-- **Dark theme** (`#0d1117` background) — easy on the eyes
-- **SVG donut gauge** — visual score indicator (check and audit reports)
+- **Terminal aesthetic** — green-on-black theme (`#0a0a0a` background, `#00ff41` accent), monospace throughout
+- **Scan line animation** — subtle CRT-style effect across the page
+- **SVG donut gauge** — visual score indicator with green/yellow/red coloring (check and audit reports)
 - **Collapsible suites** — CSS-only `<details>/<summary>`, no JavaScript
 - **Per-check details** — status icon, check name, and message for every check
 - **Benchmark bar charts** — horizontal bars colored by latency (green/yellow/red)
-- **Responsive layout** — works on desktop and mobile
+- **Fixed navigation** — audit reports have a sticky top nav linking to conformance and latency sections
+- **Print styles** — clean black-on-white for printing, animations disabled
 - **Inline CSS** — everything in one file, works offline, no CDN dependencies
 
 Skipped benchmark tools appear as a dim, italic row spanning the full table.
 
 HTML reports are generated for all three report types: check, bench, and audit.
 
-See an [example HTML report](https://github.com/abhishekhsingh/mcp-halflist/blob/main/examples/audit-report.html) generated from the official MCP reference server.
+See example HTML reports generated from the official MCP reference server:
+[Check](https://github.com/abhishekhsingh/mcp-halflist/blob/main/examples/check-report.html) ·
+[Bench](https://github.com/abhishekhsingh/mcp-halflist/blob/main/examples/bench-report.html) ·
+[Audit](https://github.com/abhishekhsingh/mcp-halflist/blob/main/examples/audit-report.html)
 
 ## SVG Badge (`halflist report --badge`)
 

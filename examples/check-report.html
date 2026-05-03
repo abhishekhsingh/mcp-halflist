@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>mcp-halflist — mcp-servers/everything — Audit</title>
+<title>mcp-halflist — mcp-servers/everything — Conformance</title>
 <style>
 :root{
   --bg:#0a0a0a;--surface:#111111;--border:#1a1a1a;
@@ -16,7 +16,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:var(--font-sans);background:var(--bg);color:var(--text);line-height:1.6;padding:2rem}
 .container{max-width:900px;margin:0 auto}
-.topnav{position:fixed;top:0;left:0;right:0;background:var(--bg);border-bottom:1px solid var(--border);padding:.5rem 1rem;z-index:1000;display:flex;align-items:center;gap:1.5rem;font-family:var(--font-mono);font-size:.8rem}.topnav .nav-brand{color:var(--green);font-weight:700}.topnav a{color:var(--green-dim);text-decoration:none;text-transform:uppercase;letter-spacing:.05em}.topnav a:hover{color:var(--green)}body{padding-top:3.5rem}
+
 .header{text-align:center;margin-bottom:2rem}
 .logo{font-family:var(--font-mono);color:var(--green);font-size:1.5rem;font-weight:700;letter-spacing:.15em;margin-bottom:.5rem}
 .tagline{color:var(--green-dim);font-size:.875rem}
@@ -83,7 +83,7 @@ tr:hover td{background:#151515}
 </head>
 <body>
 <div class="scanline"></div>
-<nav class="topnav"><span class="nav-brand">halflist</span><a href="#conformance">Conformance</a><a href="#latency">Latency</a></nav>
+
 <div class="container">
 <div class="header">
 <div class="logo">HALFLIST</div>
@@ -92,9 +92,9 @@ tr:hover td{background:#151515}
 <div class="card"><div class="gauge-wrap"><div class="gauge"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="gauge-bg"/><circle cx="50" cy="50" r="42" class="gauge-fg" stroke="#00ff41" stroke-dasharray="263.9" stroke-dashoffset="2.6"/></svg><div class="gauge-text" style="color:#00ff41">99</div></div>
 <div><div class="verdict pass">PASS</div>
 <div class="meta-item"><span class="meta-value">mcp-servers/everything</span> v2.0.0</div>
-<div class="meta-item">71.8s total</div></div></div>
-<div class="meta-grid"><div class="meta-item"><span class="meta-label">Transport:</span> <span class="meta-value">stdio</span></div><div class="meta-item"><span class="meta-label">Passed:</span> <span class="meta-value pass">36</span></div><div class="meta-item"><span class="meta-label">Failed:</span> <span class="meta-value fail">0</span></div><div class="meta-item"><span class="meta-label">Warnings:</span> <span class="meta-value warn">0</span></div><div class="meta-item"><span class="meta-label">Tools:</span> <span class="meta-value">12 of 13</span></div><div class="meta-item"><span class="meta-label">Iterations:</span> <span class="meta-value">5</span></div></div></div>
-<div class="card" id="conformance"><h2>Conformance</h2>
+<div class="meta-item">0.0s total</div></div></div>
+<div class="meta-grid"><div class="meta-item"><span class="meta-label">Transport:</span> <span class="meta-value">stdio</span></div><div class="meta-item"><span class="meta-label">Passed:</span> <span class="meta-value pass">36</span></div><div class="meta-item"><span class="meta-label">Failed:</span> <span class="meta-value fail">0</span></div><div class="meta-item"><span class="meta-label">Warnings:</span> <span class="meta-value warn">0</span></div></div></div>
+<div class="card"><h2>Suites</h2>
 <details><summary><span class="pass">━━ HANDSHAKE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6/6 &#10003;</span></summary>
 <div class="check-list"><div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Server responds to initialize</span><span class="dot-leader"></span><span class="check-msg">PASS</span></div>
 <div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Protocol version returned</span><span class="dot-leader"></span><span class="check-msg">v2025-11-25</span></div>
@@ -121,7 +121,7 @@ tr:hover td{background:#151515}
 <div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">At least 1 resource exists</span><span class="dot-leader"></span><span class="check-msg">7 resources</span></div>
 <div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Every resource has uri</span><span class="dot-leader"></span><span class="check-msg">PASS</span></div>
 <div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Every resource has name</span><span class="dot-leader"></span><span class="check-msg">PASS</span></div>
-<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">resources/read returns valid content</span><span class="dot-leader"></span><span class="check-msg">1 items, 2ms</span></div>
+<div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">resources/read returns valid content</span><span class="dot-leader"></span><span class="check-msg">1 items, 5ms</span></div>
 <div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Each content item has uri</span><span class="dot-leader"></span><span class="check-msg">PASS</span></div>
 <div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Each content item has text or blob</span><span class="dot-leader"></span><span class="check-msg">PASS</span></div>
 <div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">mimeType is valid format</span><span class="dot-leader"></span><span class="check-msg">PASS</span></div>
@@ -142,23 +142,6 @@ tr:hover td{background:#151515}
 <div class="check-row"><span class="check-icon pass">&#10003;</span><span class="check-name">Suspicious encoding</span><span class="dot-leader"></span><span class="check-msg pass">CLEAN</span></div>
 <div class="check-row"><span class="check-icon skip">&mdash;</span><span class="check-name">Tool pin verification</span><span class="dot-leader"></span><span class="check-msg skip">NOT REQUESTED</span></div>
 </div></details>
-</div>
-<div class="card" id="latency"><h2>Latency per Tool</h2>
-<table><thead><tr><th>Tool</th><th>p50</th><th>p95</th><th>p99</th><th>min</th><th>max</th><th>p99 bar</th></tr></thead><tbody>
-<tr><td>echo</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
-<tr><td>get-annotated-message</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
-<tr><td>get-env</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">0ms</div></div></td></tr>
-<tr><td>get-resource-links</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
-<tr><td>get-resource-reference</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
-<tr><td>get-structured-content</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
-<tr><td>get-sum</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">0ms</div></div></td></tr>
-<tr><td>get-tiny-image</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">0ms</div></div></td></tr>
-<tr><td>gzip-file-as-resource</td><td>25ms</td><td>36ms</td><td>36ms</td><td>23ms</td><td>36ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">36ms</div></div></td></tr>
-<tr><td>toggle-simulated-logging</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
-<tr><td>toggle-subscriber-updates</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
-<tr><td>trigger-long-running-operation</td><td>10011ms</td><td>10022ms</td><td>10022ms</td><td>10006ms</td><td>10022ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:100%;background:#ff0040"></div><div class="bar-label">10022ms</div></div></td></tr>
-<tr style="color:#555555"><td>simulate-research-query</td><td colspan="6" style="font-style:italic">skipped (args rejected)</td></tr>
-</tbody></table>
 </div>
 
 <p class="footer">Generated by mcp-halflist v0.4.0 · <a href="https://github.com/abhishekhsingh/mcp-halflist">GitHub</a></p>

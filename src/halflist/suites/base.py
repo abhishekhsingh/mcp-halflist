@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Callable
+from typing import Callable, Literal
 
 from halflist.client import HalflistClient
 from halflist.models import CheckResult, SuiteResult
@@ -22,13 +22,13 @@ class CheckSuite:
     def record(
         self,
         name: str,
-        status: str,
+        status: Literal["PASS", "FAIL", "WARN", "SKIP"],
         message: str | None = None,
         duration_ms: float = 0.0,
     ) -> None:
         check = CheckResult(
             name=name,
-            status=status,  # type: ignore[arg-type]
+            status=status,
             message=message,
             duration_ms=duration_ms,
             suite=self.name,

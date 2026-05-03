@@ -4,6 +4,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from halflist import __version__
 from halflist.cli import app
 
 runner = CliRunner()
@@ -20,7 +21,7 @@ def test_bench_default_json() -> None:
     assert result.exit_code == 0, result.output
 
     report = json.loads(result.output)
-    assert report["version"] == "0.3.0"
+    assert report["version"] == __version__
     assert report["transport"] == "stdio"
     assert report["iterations"] == 3
     assert report["warmup"] == 0

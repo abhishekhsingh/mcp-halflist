@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from halflist.constants import TOOL_NAME_PATTERN
+from halflist.models import SuiteResult
 from halflist.schema_gen import generate_args
 from halflist.suites.base import CheckSuite
 
@@ -10,7 +11,7 @@ from halflist.suites.base import CheckSuite
 class ToolsSuite(CheckSuite):
     name = "tools"
 
-    async def run(self):
+    async def run(self) -> SuiteResult:
         start = self.measure()
 
         try:
@@ -77,6 +78,7 @@ class ToolsSuite(CheckSuite):
 
         first_tool = tools[0]
         args = generate_args(first_tool.inputSchema)
+        call_result = None
         try:
             t0 = self.measure()
             call_result = await self.client.call_tool(first_tool.name, args)
@@ -116,8 +118,8 @@ class ToolsSuite(CheckSuite):
                 f"Exception: {e}",
             )
 
-        try:
-            content = call_result.content  # type: ignore[possibly-undefined]
+        if call_result is not None and hasattr(call_result, "content"):
+            content = call_result.content
             if isinstance(content, list):
                 self.record("Response content is a list", "PASS")
                 all_typed = all(hasattr(item, "type") for item in content)
@@ -128,7 +130,7 @@ class ToolsSuite(CheckSuite):
             else:
                 self.record("Response content is a list", "FAIL", f"Got {type(content).__name__}")
                 self.record("Each content item has a type field", "SKIP", "Content not a list")
-        except Exception:
+        else:
             self.record("Response content is a list", "SKIP", "No successful call result")
             self.record("Each content item has a type field", "SKIP", "No successful call result")
 

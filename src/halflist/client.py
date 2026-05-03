@@ -1,25 +1,30 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import shlex
 import time
 from contextlib import AsyncExitStack
 from typing import Any
 
+import httpx
 from mcp import types
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
+from halflist.constants import DEFAULT_TIMEOUT
 from halflist.models import ServerInfo
 
 
 class HalflistClient:
-    def __init__(self, timeout: int = 30, quiet: bool = False) -> None:
+    def __init__(self, timeout: int = DEFAULT_TIMEOUT, quiet: bool = False) -> None:
         self._session: ClientSession | None = None
         self._exit_stack: AsyncExitStack | None = None
         self._timeout = timeout
         self._quiet = quiet
         self.init_result: types.InitializeResult | None = None
+        self.transport: str = "stdio"
+        self._last_duration_ms: float = 0.0
 
     async def connect_stdio(self, command: str) -> None:
         parts = shlex.split(command)
@@ -44,6 +49,105 @@ class HalflistClient:
         self._session = await self._exit_stack.enter_async_context(
             ClientSession(read_stream, write_stream)
         )
+        self.transport = "stdio"
+
+    async def connect_http(
+        self, url: str, headers: dict[str, str] | None = None,
+    ) -> None:
+        """Connect via Streamable HTTP, falling back to legacy SSE.
+
+        Each transport is verified by actually calling initialize().
+        If Streamable HTTP fails or times out, we clean up and try SSE.
+        """
+        streamable_err: BaseException | None = None
+        try:
+            await self._try_streamable_http(url, headers)
+            self.transport = "streamable-http"
+            return
+        except BaseException as e:
+            streamable_err = e
+
+        try:
+            await self._try_sse(url, headers)
+            self.transport = "sse"
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            raise ConnectionError(
+                f"Failed to connect via Streamable HTTP ({streamable_err}) and SSE ({e})"
+            ) from e
+
+    async def _try_streamable_http(
+        self, url: str, headers: dict[str, str] | None = None,
+    ) -> None:
+        from mcp.client.streamable_http import streamable_http_client
+
+        exit_stack = AsyncExitStack()
+        try:
+            http_client: httpx.AsyncClient | None = None
+            if headers:
+                http_client = httpx.AsyncClient(headers=headers)
+                exit_stack.push_async_callback(http_client.aclose)
+
+            ctx_args: dict[str, Any] = {"url": url}
+            if http_client:
+                ctx_args["http_client"] = http_client
+
+            read_stream, write_stream, _ = await exit_stack.enter_async_context(
+                streamable_http_client(**ctx_args)
+            )
+            session = await exit_stack.enter_async_context(
+                ClientSession(read_stream, write_stream)
+            )
+
+            result = await asyncio.wait_for(
+                session.initialize(), timeout=self._timeout,
+            )
+
+            self._exit_stack = exit_stack
+            self._session = session
+            self.init_result = result
+        except BaseException:
+            self._session = None
+            try:
+                await exit_stack.aclose()
+            except Exception:
+                pass
+            raise
+
+    async def _try_sse(
+        self, url: str, headers: dict[str, str] | None = None,
+    ) -> None:
+        from mcp.client.sse import sse_client
+
+        exit_stack = AsyncExitStack()
+        try:
+            ctx_args: dict[str, Any] = {"url": url}
+            if headers:
+                ctx_args["headers"] = headers
+
+            read_stream, write_stream = await exit_stack.enter_async_context(
+                sse_client(**ctx_args)
+            )
+            session = await exit_stack.enter_async_context(
+                ClientSession(read_stream, write_stream)
+            )
+
+            result = await asyncio.wait_for(
+                session.initialize(), timeout=self._timeout,
+            )
+
+            self._exit_stack = exit_stack
+            self._session = session
+            self.init_result = result
+        except BaseException:
+            self._session = None
+            try:
+                await exit_stack.aclose()
+            except Exception:
+                pass
+            raise
 
     @property
     def session(self) -> ClientSession:
@@ -52,17 +156,55 @@ class HalflistClient:
         return self._session
 
     async def initialize(self) -> ServerInfo:
+        if self.init_result is not None:
+            return ServerInfo(
+                name=self.init_result.serverInfo.name,
+                version=self.init_result.serverInfo.version,
+            )
         start = time.monotonic()
         result = await self.session.initialize()
         self._last_duration_ms = (time.monotonic() - start) * 1000
         self.init_result = result
         return ServerInfo(name=result.serverInfo.name, version=result.serverInfo.version)
 
+    def has_capability(self, name: str) -> bool:
+        if self.init_result is None or self.init_result.capabilities is None:
+            return False
+        return getattr(self.init_result.capabilities, name, None) is not None
+
     async def list_tools(self) -> list[types.Tool]:
         start = time.monotonic()
         result = await self.session.list_tools()
         self._last_duration_ms = (time.monotonic() - start) * 1000
         return result.tools
+
+    async def list_resources(self) -> list[types.Resource]:
+        start = time.monotonic()
+        result = await self.session.list_resources()
+        self._last_duration_ms = (time.monotonic() - start) * 1000
+        return result.resources
+
+    async def read_resource(self, uri: str) -> types.ReadResourceResult:
+        from pydantic import AnyUrl
+
+        start = time.monotonic()
+        result = await self.session.read_resource(AnyUrl(uri))
+        self._last_duration_ms = (time.monotonic() - start) * 1000
+        return result
+
+    async def list_prompts(self) -> list[types.Prompt]:
+        start = time.monotonic()
+        result = await self.session.list_prompts()
+        self._last_duration_ms = (time.monotonic() - start) * 1000
+        return result.prompts
+
+    async def get_prompt(
+        self, name: str, arguments: dict[str, str] | None = None,
+    ) -> types.GetPromptResult:
+        start = time.monotonic()
+        result = await self.session.get_prompt(name, arguments)
+        self._last_duration_ms = (time.monotonic() - start) * 1000
+        return result
 
     async def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> types.CallToolResult:
         start = time.monotonic()
@@ -84,7 +226,7 @@ class HalflistClient:
         if self._exit_stack:
             try:
                 await self._exit_stack.aclose()
-            except (RuntimeError, OSError, Exception):
+            except Exception:
                 pass
             self._exit_stack = None
         self._session = None

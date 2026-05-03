@@ -10,7 +10,7 @@ CI-first conformance, security, and benchmarking CLI for MCP servers.
 
 ## What It Does
 
-Point it at any [MCP](https://modelcontextprotocol.io) server and get a scored conformance report, security vulnerability scan (prompt injection, tool poisoning, data exfiltration), and per-tool latency benchmarks. Fully offline, zero API keys, CI-native. One `pip install`, one command, done.
+Point it at any [MCP](https://modelcontextprotocol.io) server — stdio or HTTP — and get a scored conformance report, security vulnerability scan (prompt injection, tool poisoning, data exfiltration), and per-tool latency benchmarks. Fully offline, zero API keys, CI-native. One `pip install`, one command, done.
 
 ## See It In Action
 
@@ -18,7 +18,10 @@ Point it at any [MCP](https://modelcontextprotocol.io) server and get a scored c
 
 ![halflist audit output](https://github.com/abhishekhsingh/mcp-halflist/blob/main/examples/terminal-output.png?raw=true)
 
-**HTML report:** [View example report](https://github.com/abhishekhsingh/mcp-halflist/blob/main/examples/audit-report.html)
+**HTML reports:**
+[Check report](https://github.com/abhishekhsingh/mcp-halflist/blob/main/examples/check-report.html) ·
+[Bench report](https://github.com/abhishekhsingh/mcp-halflist/blob/main/examples/bench-report.html) ·
+[Audit report](https://github.com/abhishekhsingh/mcp-halflist/blob/main/examples/audit-report.html)
 
 ## Install
 
@@ -46,6 +49,19 @@ halflist check --stdio "npx -y @modelcontextprotocol/server-everything" --verify
 
 # Your own server
 halflist audit --stdio "python3 my_server.py"
+
+# HTTP transport (Streamable HTTP with SSE fallback)
+halflist check --http http://localhost:8080/mcp
+halflist audit --http http://localhost:8080/mcp
+
+# HTTP with auth
+halflist check --http https://mcp.example.com/v1 --header "Authorization: Bearer tok123"
+
+# HTTP with OAuth2 client credentials
+halflist audit --http https://mcp.example.com/v1 \
+  --oauth-token-url https://auth.example.com/token \
+  --oauth-client-id my-client \
+  --oauth-client-secret my-secret
 
 # More real servers to try
 halflist check --stdio "npx -y @modelcontextprotocol/server-time"

@@ -8,13 +8,25 @@ from halflist.models import WatchProbe
 from halflist.suites.handshake import HandshakeSuite
 
 
-async def run_probe(command: str, quiet: bool, timeout: int) -> WatchProbe:
+async def run_probe(
+    *,
+    stdio: str | None = None,
+    http_url: str | None = None,
+    headers: dict[str, str] | None = None,
+    quiet: bool,
+    timeout: int,
+) -> WatchProbe:
     start = time.monotonic()
     client = HalflistClient(timeout=timeout, quiet=quiet)
 
     try:
         t0 = time.monotonic()
-        await client.connect_stdio(command)
+        if stdio:
+            await client.connect_stdio(stdio)
+        elif http_url:
+            await client.connect_http(http_url, headers)
+        else:
+            raise ValueError("Provide either stdio or http_url")
         server_info = await client.initialize()
         connection_ms = (time.monotonic() - t0) * 1000
     except Exception as e:

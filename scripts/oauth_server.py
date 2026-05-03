@@ -1,36 +1,24 @@
+#!/usr/bin/env python3
+"""Standalone OAuth2 mock server for testing halflist --oauth-* flags.
+
+Usage:
+    python scripts/oauth_server.py              # port 9090
+    python scripts/oauth_server.py --port 8888  # custom port
+
+Token endpoint:  http://localhost:9090/token
+Grant type:      client_credentials
+Any client_id / client_secret pair works (both must be non-empty).
+Returns:         {"access_token": "mock-token-<client_id>", ...}
+"""
+from __future__ import annotations
+
+import argparse
 import http.server
 import json
-import sys
-import threading
 import urllib.parse
-from pathlib import Path
-
-import pytest
-
-SERVERS_DIR = Path(__file__).parent / "servers"
 
 
-@pytest.fixture
-def good_server_cmd() -> str:
-    return f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"
-
-
-@pytest.fixture
-def bad_server_cmd() -> str:
-    return f"{sys.executable} {SERVERS_DIR / 'bad_server.py'}"
-
-
-@pytest.fixture
-def poisoned_server_cmd() -> str:
-    return f"{sys.executable} {SERVERS_DIR / 'poisoned_server.py'}"
-
-
-@pytest.fixture
-def full_server_cmd() -> str:
-    return f"{sys.executable} {SERVERS_DIR / 'full_server.py'}"
-
-
-class _OAuthTokenHandler(http.server.BaseHTTPRequestHandler):
+class OAuthTokenHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length).decode()
@@ -67,20 +55,24 @@ class _OAuthTokenHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
-    def log_message(self, *args: object) -> None:
-        pass
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="OAuth2 mock server")
+    parser.add_argument("--port", type=int, default=9090)
+    args = parser.parse_args()
+
+    server = http.server.HTTPServer(("127.0.0.1", args.port), OAuthTokenHandler)
+    print(f"OAuth2 mock server running on http://127.0.0.1:{args.port}/token")
+    print("  grant_type:    client_credentials")
+    print("  client_id:     any non-empty string")
+    print("  client_secret: any non-empty string")
+    print("  Press Ctrl+C to stop")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nShutting down.")
+        server.shutdown()
 
 
-@pytest.fixture
-def oauth_server() -> dict[str, str]:
-    """Spin up a local OAuth2 mock server. Returns {"url", "client_id", "client_secret"}."""
-    server = http.server.HTTPServer(("127.0.0.1", 0), _OAuthTokenHandler)
-    port = server.server_address[1]
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    yield {
-        "url": f"http://127.0.0.1:{port}/token",
-        "client_id": "test-client",
-        "client_secret": "test-secret",
-    }
-    server.shutdown()
+if __name__ == "__main__":
+    main()

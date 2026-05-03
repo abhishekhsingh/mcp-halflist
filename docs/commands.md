@@ -23,13 +23,21 @@ Run protocol conformance and security checks against an MCP server.
 
 - **handshake** (6 checks) — initialize, protocol version, capabilities, server info, initialized notification, ping/pong
 - **tools** (11 checks) — tools/list validation, naming, descriptions, schemas, tool call smoke test
+- **resources** (8 checks) — resources/list validation, uri/name checks, resources/read smoke test, content item validation, mimeType format. Skipped if the server does not advertise the resources capability.
+- **prompts** (7 checks) — prompts/list validation, name/description checks, prompts/get smoke test, message role/content validation. Skipped if the server does not advertise the prompts capability.
 - **security** (5 checks) — prompt injection scan, data exfiltration references, cross-tool manipulation, suspicious encoding, tool pin verification
 
 ### Options
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--stdio` | | *(required)* | Command to launch the MCP server via stdio |
+| `--stdio` | | | Command to launch the MCP server via stdio |
+| `--http` | | | URL of the MCP server via HTTP (Streamable HTTP with SSE fallback) |
+| `--header` | | | HTTP header (`Key: Value`). Repeatable. Requires `--http` |
+| `--oauth-token-url` | | | OAuth2 token endpoint URL. Requires `--http` |
+| `--oauth-client-id` | | | OAuth2 client ID |
+| `--oauth-client-secret` | | | OAuth2 client secret |
+| `--oauth-scope` | | | OAuth2 scope (optional) |
 | `--format` | | `terminal` | Output format: `terminal` or `json` |
 | `--suite` | | all suites | Suite(s) to run. Repeatable (e.g. `--suite handshake --suite security`) |
 | `--verbose` | `-v` | off | Show all check details including passing checks |
@@ -37,11 +45,25 @@ Run protocol conformance and security checks against an MCP server.
 | `--timeout` | | `30` | Timeout in seconds per operation |
 | `--verify-pins` | | off | Verify tool definitions against a saved pin snapshot |
 
+Either `--stdio` or `--http` is required. They are mutually exclusive. Auth flags (`--header`, `--oauth-*`) require `--http`.
+
 ### Examples
 
 ```bash
-# Basic conformance check
+# Basic conformance check (stdio)
 halflist check --stdio "npx -y @modelcontextprotocol/server-everything"
+
+# HTTP transport
+halflist check --http http://localhost:8080/mcp
+
+# HTTP with bearer token
+halflist check --http https://mcp.example.com/v1 --header "Authorization: Bearer tok123"
+
+# HTTP with OAuth2 client credentials
+halflist check --http https://mcp.example.com/v1 \
+  --oauth-token-url https://auth.example.com/token \
+  --oauth-client-id my-client \
+  --oauth-client-secret my-secret
 
 # Run only the security suite
 halflist check --stdio "python3 my_server.py" --suite security
@@ -82,7 +104,13 @@ Each tool is called with synthetically generated arguments based on its `inputSc
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--stdio` | | *(required)* | Command to launch the MCP server via stdio |
+| `--stdio` | | | Command to launch the MCP server via stdio |
+| `--http` | | | URL of the MCP server via HTTP |
+| `--header` | | | HTTP header (`Key: Value`). Repeatable. Requires `--http` |
+| `--oauth-token-url` | | | OAuth2 token endpoint URL. Requires `--http` |
+| `--oauth-client-id` | | | OAuth2 client ID |
+| `--oauth-client-secret` | | | OAuth2 client secret |
+| `--oauth-scope` | | | OAuth2 scope (optional) |
 | `--tool` | | first 5 | Tool(s) to benchmark. Repeatable (e.g. `--tool echo --tool search`) |
 | `--all` | | off | Benchmark all discovered tools |
 | `--iterations` | `-n` | `10` | Number of measured iterations per tool |
@@ -91,11 +119,16 @@ Each tool is called with synthetically generated arguments based on its `inputSc
 | `--quiet` | `-q` | off | Suppress server stderr output. Auto-enabled with `--format json` |
 | `--timeout` | | `30` | Timeout in seconds per operation |
 
+Either `--stdio` or `--http` is required. They are mutually exclusive.
+
 ### Examples
 
 ```bash
 # Benchmark first 5 tools (default)
 halflist bench --stdio "npx -y @modelcontextprotocol/server-everything"
+
+# Benchmark via HTTP
+halflist bench --http http://localhost:8080/mcp --all
 
 # Benchmark all tools
 halflist bench --stdio "python3 my_server.py" --all
@@ -112,7 +145,7 @@ halflist bench --stdio "python3 my_server.py" --format json
 
 ### Output
 
-The terminal table shows p50, p95, p99, min, and max latency per tool. Sub-millisecond values display as `<1ms`.
+The terminal table shows p50, p95, p99, min, and max latency per tool, with a colored status dot: green (fast, p99 < 100ms), yellow (moderate, p99 100–1000ms), red (slow, p99 > 1000ms). Sub-millisecond values display as `<1ms`.
 
 Skipped tools appear in dim text:
 
@@ -138,7 +171,13 @@ Audit always runs all suites (no `--suite` filter) and benchmarks all discovered
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--stdio` | | *(required)* | Command to launch the MCP server via stdio |
+| `--stdio` | | | Command to launch the MCP server via stdio |
+| `--http` | | | URL of the MCP server via HTTP |
+| `--header` | | | HTTP header (`Key: Value`). Repeatable. Requires `--http` |
+| `--oauth-token-url` | | | OAuth2 token endpoint URL. Requires `--http` |
+| `--oauth-client-id` | | | OAuth2 client ID |
+| `--oauth-client-secret` | | | OAuth2 client secret |
+| `--oauth-scope` | | | OAuth2 scope (optional) |
 | `--iterations` | `-n` | `10` | Benchmark iterations per tool |
 | `--warmup` | `-w` | `2` | Warmup iterations, discarded before measuring |
 | `--verbose` | `-v` | off | Show all check details including passing checks |
@@ -147,11 +186,16 @@ Audit always runs all suites (no `--suite` filter) and benchmarks all discovered
 | `--timeout` | | `30` | Timeout in seconds per operation |
 | `--verify-pins` | | off | Verify tool definitions against a saved pin snapshot |
 
+Either `--stdio` or `--http` is required. They are mutually exclusive.
+
 ### Examples
 
 ```bash
 # Full audit — conformance + security + benchmarks
 halflist audit --stdio "npx -y @modelcontextprotocol/server-everything"
+
+# Audit via HTTP
+halflist audit --http http://localhost:8080/mcp
 
 # JSON output for CI
 halflist audit --stdio "python3 my_server.py" --format json
@@ -181,18 +225,29 @@ Continuously monitor an MCP server's health. Each probe opens a fresh connection
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--stdio` | | *(required)* | Command to launch the MCP server via stdio |
+| `--stdio` | | | Command to launch the MCP server via stdio |
+| `--http` | | | URL of the MCP server via HTTP |
+| `--header` | | | HTTP header (`Key: Value`). Repeatable. Requires `--http` |
+| `--oauth-token-url` | | | OAuth2 token endpoint URL. Requires `--http` |
+| `--oauth-client-id` | | | OAuth2 client ID |
+| `--oauth-client-secret` | | | OAuth2 client secret |
+| `--oauth-scope` | | | OAuth2 scope (optional) |
 | `--interval` | `-i` | `60` | Seconds between probes |
 | `--count` | `-c` | infinite | Number of probes before exiting |
 | `--log` | `-l` | none | Append JSONL probe results to this file |
 | `--quiet` | `-q` | off | Suppress server stderr output |
 | `--timeout` | | `30` | Timeout in seconds per operation |
 
+Either `--stdio` or `--http` is required. They are mutually exclusive.
+
 ### Examples
 
 ```bash
 # Probe every 60 seconds (default), run forever
 halflist watch --stdio "npx -y @modelcontextprotocol/server-time"
+
+# Watch an HTTP server
+halflist watch --http http://localhost:8080/mcp --interval 30
 
 # Probe every 30 seconds, log to file
 halflist watch --stdio "python3 my_server.py" --interval 30 --log health.jsonl
@@ -263,16 +318,27 @@ Pins are stored in `~/.halflist/pins/<server-name>.json` by default.
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--stdio` | | *(required)* | Command to launch the MCP server via stdio |
+| `--stdio` | | | Command to launch the MCP server via stdio |
+| `--http` | | | URL of the MCP server via HTTP |
+| `--header` | | | HTTP header (`Key: Value`). Repeatable. Requires `--http` |
+| `--oauth-token-url` | | | OAuth2 token endpoint URL. Requires `--http` |
+| `--oauth-client-id` | | | OAuth2 client ID |
+| `--oauth-client-secret` | | | OAuth2 client secret |
+| `--oauth-scope` | | | OAuth2 scope (optional) |
 | `--output` | `-o` | `~/.halflist/pins/<name>.json` | Write pin file to a custom path |
 | `--quiet` | `-q` | off | Suppress server stderr output |
 | `--timeout` | | `30` | Timeout in seconds per operation |
+
+Either `--stdio` or `--http` is required. They are mutually exclusive.
 
 ### Examples
 
 ```bash
 # Pin current tool definitions
 halflist pin --stdio "npx -y @modelcontextprotocol/server-everything"
+
+# Pin an HTTP server
+halflist pin --http http://localhost:8080/mcp
 
 # Later: check if anything changed
 halflist check --stdio "npx -y @modelcontextprotocol/server-everything" --verify-pins

@@ -1,3 +1,4 @@
+from halflist import __version__
 from halflist.report import (
     detect_report_type,
     render_audit_html,
@@ -10,7 +11,7 @@ from halflist.report import (
 )
 
 SAMPLE_CHECK = {
-    "version": "0.2.0",
+    "version": __version__,
     "timestamp": "2026-04-28T12:00:00+00:00",
     "server_info": {"name": "test-server", "version": "1.0.0"},
     "transport": "stdio",
@@ -33,7 +34,7 @@ SAMPLE_CHECK = {
 }
 
 SAMPLE_BENCH = {
-    "version": "0.2.0",
+    "version": __version__,
     "timestamp": "2026-04-28T12:00:00+00:00",
     "server_info": {"name": "test-server", "version": "1.0.0"},
     "transport": "stdio",
@@ -102,7 +103,7 @@ def test_badge_svg_bench() -> None:
 
 
 SAMPLE_AUDIT = {
-    "version": "0.2.0",
+    "version": __version__,
     "timestamp": "2026-04-28T12:00:00+00:00",
     "server_info": {"name": "test-server", "version": "1.0.0"},
     "transport": "stdio",
@@ -176,7 +177,7 @@ def test_check_html() -> None:
     assert "test-server" in html
     assert "mcp-halflist" in html
     assert "PASS" in html
-    assert "handshake" in html
+    assert "HANDSHAKE" in html
 
 
 def test_bench_html() -> None:
@@ -193,7 +194,7 @@ def test_audit_html() -> None:
     assert "<!DOCTYPE html>" in html
     assert "test-server" in html
     assert "PASS" in html
-    assert "handshake" in html
+    assert "HANDSHAKE" in html
     assert "greet" in html
     assert "gauge" in html
 

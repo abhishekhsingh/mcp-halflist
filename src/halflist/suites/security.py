@@ -10,7 +10,7 @@ from typing import Callable
 from mcp import types
 
 from halflist.client import HalflistClient
-from halflist.models import SuiteResult
+from halflist.models import CheckResult, SuiteResult
 from halflist.suites.base import CheckSuite
 
 # ── Check 1: Prompt injection patterns ────────────────────────────────────────
@@ -45,6 +45,9 @@ _INJECTION_FAIL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
         "Before using this tool + credential access",
     ),
     (re.compile(r"<HIDDEN>", re.IGNORECASE), "<HIDDEN> tag"),
+]
+
+_INJECTION_WARN_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"<!--.*?-->", re.DOTALL), "HTML comment"),
 ]
 
@@ -63,7 +66,7 @@ _EXFIL_FAIL_PATH_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bid_rsa\b"), "id_rsa"),
     (re.compile(r"\bid_ed25519\b"), "id_ed25519"),
     (re.compile(r"~/?\.env\b"), "~/.env"),
-    (re.compile(r"(?<!\w)\.env\b"), ".env"),
+    (re.compile(r"(?<!\w)\.env(?!\.\w)\b"), ".env"),
     (re.compile(r"~/?\.aws/credentials\b"), "~/.aws/credentials"),
     (re.compile(r"~/?\.gnupg\b"), "~/.gnupg"),
     (re.compile(r"~/?\.config\b"), "~/.config"),
@@ -72,12 +75,12 @@ _EXFIL_FAIL_PATH_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 ]
 
 _EXFIL_FAIL_IMPERATIVE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"read.*password", re.IGNORECASE | re.DOTALL), "read...password"),
-    (re.compile(r"send.*token", re.IGNORECASE | re.DOTALL), "send...token"),
-    (re.compile(r"upload.*key", re.IGNORECASE | re.DOTALL), "upload...key"),
-    (re.compile(r"pass.*credentials", re.IGNORECASE | re.DOTALL), "pass...credentials"),
-    (re.compile(r"include.*secret", re.IGNORECASE | re.DOTALL), "include...secret"),
-    (re.compile(r"attach.*cookie", re.IGNORECASE | re.DOTALL), "attach...cookie"),
+    (re.compile(r"read.{0,80}password", re.IGNORECASE), "read...password"),
+    (re.compile(r"send.{0,80}token", re.IGNORECASE), "send...token"),
+    (re.compile(r"upload.{0,80}key", re.IGNORECASE), "upload...key"),
+    (re.compile(r"pass.{0,80}credentials", re.IGNORECASE), "pass...credentials"),
+    (re.compile(r"include.{0,80}secret", re.IGNORECASE), "include...secret"),
+    (re.compile(r"attach.{0,80}cookie", re.IGNORECASE), "attach...cookie"),
 ]
 
 _EXFIL_WARN_HTTP: re.Pattern[str] = re.compile(r"http://")
@@ -136,7 +139,7 @@ class SecuritySuite(CheckSuite):
     def __init__(
         self,
         client: HalflistClient,
-        on_check: Callable[..., None] | None = None,
+        on_check: Callable[[CheckResult], None] | None = None,
         *,
         verify_pins: bool = False,
         pins_dir: Path | None = None,
@@ -174,6 +177,10 @@ class SecuritySuite(CheckSuite):
             for pattern, label in _INJECTION_FAIL_PATTERNS:
                 if pattern.search(desc):
                     failures.append(f"{tool.name}: {label}")
+
+            for pattern, label in _INJECTION_WARN_PATTERNS:
+                if pattern.search(desc):
+                    warnings.append(f"{tool.name}: {label}")
 
             if len(desc) > _INJECTION_WARN_DESC_LENGTH:
                 warnings.append(f"{tool.name}: description length {len(desc)} chars")

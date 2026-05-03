@@ -4,6 +4,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from halflist import __version__
 from halflist.cli import app
 
 runner = CliRunner()
@@ -22,12 +23,12 @@ def test_audit_json() -> None:
     assert result.exit_code == 0, result.output
 
     report = json.loads(result.output)
-    assert report["version"] == "0.3.0"
+    assert report["version"] == __version__
     assert report["transport"] == "stdio"
     assert report["score"] > 0
     assert "suites" in report
     assert "benchmarks" in report
-    assert len(report["suites"]) == 3
+    assert len(report["suites"]) == 5
     assert report["benchmarked_count"] == 5
     assert len(report["benchmarks"]) == 5
     assert report["total_failed"] == 0
@@ -54,7 +55,9 @@ def test_audit_combined_has_both_sections() -> None:
     report = json.loads(result.output)
     assert report["suites"][0]["name"] == "handshake"
     assert report["suites"][1]["name"] == "tools"
-    assert report["suites"][2]["name"] == "security"
+    assert report["suites"][2]["name"] == "resources"
+    assert report["suites"][3]["name"] == "prompts"
+    assert report["suites"][4]["name"] == "security"
 
     tool_names = {b["tool_name"] for b in report["benchmarks"]}
     assert "greet" in tool_names

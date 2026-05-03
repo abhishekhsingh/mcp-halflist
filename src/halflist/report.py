@@ -28,7 +28,26 @@ STATUS_SYMBOLS = {
     "SKIP": ("—", "dim"),
 }
 
+_SECURITY_LABELS = {
+    "PASS": ("CLEAN", "green"),
+    "FAIL": ("THREAT DETECTED", "bold red"),
+    "SKIP": ("NOT REQUESTED", "dim"),
+    "WARN": ("WARN", "yellow"),
+}
+
 DOT_LEADER_WIDTH = 52
+
+_BANNER = (
+    "[dim cyan] ╦ ╦╔═╗╦  ╔═╗╦  ╦╔═╗╔╦╗[/dim cyan]\n"
+    "[dim cyan] ╠═╣╠═╣║  ╠╣ ║  ║╚═╗ ║ [/dim cyan]\n"
+    "[dim cyan] ╩ ╩╩ ╩╩═╝╚  ╩═╝╩╚═╝ ╩ [/dim cyan]\n"
+    "[dim] MCP Server Conformance · v{version}[/dim]"
+)
+
+
+def print_banner(console: Console) -> None:
+    console.print(_BANNER.format(version=__version__))
+    console.print()
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +75,7 @@ def compute_score(suites: list[SuiteResult]) -> int:
 def build_report(
     server_info: ServerInfo | None,
     suites: list[SuiteResult],
+    transport: str = "stdio",
 ) -> HalflistReport:
     total_passed = sum(s.passed for s in suites)
     total_failed = sum(s.failed for s in suites)
@@ -67,7 +87,7 @@ def build_report(
         version=__version__,
         timestamp=datetime.now(timezone.utc).isoformat(),
         server_info=server_info,
-        transport="stdio",
+        transport=transport,
         suites=suites,
         score=score,
         total_passed=total_passed,
@@ -82,10 +102,28 @@ def build_report(
 # ---------------------------------------------------------------------------
 
 
-def print_connection(console: Console, server_info: ServerInfo, tool_count: int) -> None:
+def print_connection(
+    console: Console,
+    server_info: ServerInfo,
+    tool_count: int,
+    resource_count: int | None = None,
+    prompt_count: int | None = None,
+    transport: str = "stdio",
+) -> None:
+    parts = [f"{tool_count} tools"]
+    if resource_count is not None:
+        parts.append(f"{resource_count} resources")
+    if prompt_count is not None:
+        parts.append(f"{prompt_count} prompts")
+    counts = " · ".join(parts)
+
+    transport_label = f" · via {transport}" if transport != "stdio" else ""
+    if transport == "sse":
+        transport_label += " [yellow](deprecated)[/yellow]"
+
     console.print(
         f"  [green]✓[/green] Connected to [bold]{server_info.name}[/bold]"
-        f" v{server_info.version} · {tool_count} tools discovered"
+        f" v{server_info.version} · {counts} discovered{transport_label}"
     )
     console.print()
 
@@ -117,6 +155,14 @@ def _latency_color(ms: float) -> str:
     if ms > 500:
         return "yellow"
     return "green"
+
+
+def _bench_status_dot(p99_ms: float) -> str:
+    if p99_ms > 1000:
+        return "[red]● slow[/red]"
+    if p99_ms >= 100:
+        return "[yellow]● moderate[/yellow]"
+    return "[green]● fast[/green]"
 
 
 # ---------------------------------------------------------------------------
@@ -229,28 +275,56 @@ def render_final_report(
 
     if is_filtered:
         if report.total_failed > 0:
-            console.print("\n  [bold red]FAIL[/bold red]")
+            console.print(Panel(
+                "  [bold red]✗  FAIL[/bold red]",
+                border_style="red", expand=False, padding=(0, 1),
+            ))
         else:
-            console.print("\n  [bold green]PASS[/bold green]")
+            console.print(Panel(
+                "  [bold green]✓  PASS[/bold green]",
+                border_style="green", expand=False, padding=(0, 1),
+            ))
     else:
         if report.total_failed > 0:
-            console.print(f"\n  [bold red]FAIL[/bold red] Score: {report.score}/100")
+            console.print(Panel(
+                f"  [bold red]✗  FAIL[/bold red]   Score: {report.score}/100",
+                border_style="red", expand=False, padding=(0, 1),
+            ))
         else:
-            console.print(f"\n  [bold green]PASS[/bold green] Score: {report.score}/100")
+            console.print(Panel(
+                f"  [bold green]✓  PASS[/bold green]   Score: {report.score}/100",
+                border_style="green", expand=False, padding=(0, 1),
+            ))
     console.print()
 
 
 def _render_suite(console: Console, suite: SuiteResult, verbose: bool) -> None:
     passed = suite.passed
     total = len(suite.checks)
-    suffix = ""
-    if suite.warned > 0:
-        suffix += f" [yellow]⚠ {suite.warned}[/yellow]"
-    if suite.failed > 0:
-        suffix += f" [red]✗ {suite.failed}[/red]"
+    name_upper = suite.name.upper()
+    count_str = f"{passed}/{total}"
 
-    dashes = "─" * (40 - len(suite.name))
-    console.print(f"  [bold]{suite.name}[/bold] {dashes} {passed}/{total} passed{suffix}")
+    if suite.failed > 0:
+        rule_color = "red"
+        suffix_sym = "✗"
+    elif suite.warned > 0:
+        rule_color = "yellow"
+        suffix_sym = "⚠"
+    else:
+        rule_color = "green"
+        suffix_sym = "✓"
+
+    prefix = f"━━ {name_upper} "
+    suffix = f" {count_str} {suffix_sym}"
+    fill_len = max(2, 56 - len(prefix) - len(suffix))
+
+    line = Text("  ")
+    line.append("━━ ", style=rule_color)
+    line.append(name_upper, style=f"bold {rule_color}")
+    line.append(f" {'━' * fill_len}", style=rule_color)
+    line.append(f" {count_str} ", style="dim")
+    line.append(suffix_sym, style=rule_color)
+    console.print(line)
 
     if not verbose:
         symbols = Text("    ")
@@ -273,12 +347,6 @@ def _render_suite(console: Console, suite: SuiteResult, verbose: bool) -> None:
 def _render_check_line(console: Console, check: CheckResult) -> None:
     sym, color = STATUS_SYMBOLS[check.status]
 
-    detail = ""
-    if check.message:
-        detail = check.message
-    elif check.duration_ms > 0:
-        detail = f"{check.duration_ms:.0f}ms"
-
     name_len = len(check.name)
     dots_count = max(2, DOT_LEADER_WIDTH - name_len)
     dots = "·" * dots_count
@@ -287,10 +355,21 @@ def _render_check_line(console: Console, check: CheckResult) -> None:
     line.append(sym, style=color)
     line.append(f" {check.name} ")
     line.append(dots, style="dim")
-    if detail:
-        line.append(f" {detail}", style="dim")
+
+    if check.suite == "security":
+        label, label_style = _SECURITY_LABELS.get(check.status, (check.status, "dim"))
+        line.append(f" {label}", style=label_style)
     else:
-        line.append(f" {check.status}", style="dim")
+        detail = ""
+        if check.message:
+            detail = check.message
+        elif check.duration_ms > 0:
+            detail = f"{check.duration_ms:.0f}ms"
+
+        if detail:
+            line.append(f" {detail}", style="dim")
+        else:
+            line.append(f" {check.status}", style="dim")
 
     console.print(line)
 
@@ -404,6 +483,7 @@ def render_bench_report(console: Console, report: BenchReport) -> None:
     table.add_column("p99", justify="right", min_width=8)
     table.add_column("min", justify="right", min_width=8)
     table.add_column("max", justify="right", min_width=8)
+    table.add_column("", min_width=12)
 
     skipped_count = 0
     benchmarked_count = 0
@@ -413,10 +493,14 @@ def render_bench_report(console: Console, report: BenchReport) -> None:
             table.add_row(
                 f"[dim]{bm.tool_name}[/dim]",
                 "[dim]skipped (args rejected)[/dim]", "", "", "", "",
+                "[dim]● skip[/dim]",
             )
         elif bm.errors == bm.iterations:
             benchmarked_count += 1
-            table.add_row(bm.tool_name, "[red]all failed[/red]", "", "", "", "")
+            table.add_row(
+                bm.tool_name, "[red]all failed[/red]", "", "", "", "",
+                "[dim red]● error[/dim red]",
+            )
         else:
             benchmarked_count += 1
             p99c = _latency_color(bm.p99_ms)
@@ -427,6 +511,7 @@ def render_bench_report(console: Console, report: BenchReport) -> None:
                 f"[{p99c}]{_fmt_ms(bm.p99_ms)}[/{p99c}]",
                 _fmt_ms(bm.min_ms),
                 _fmt_ms(bm.max_ms),
+                _bench_status_dot(bm.p99_ms),
             )
 
     console.print(table)
@@ -509,6 +594,7 @@ def render_audit_report(console: Console, report: AuditReport, verbose: bool) ->
         table.add_column("p99", justify="right", min_width=8)
         table.add_column("min", justify="right", min_width=8)
         table.add_column("max", justify="right", min_width=8)
+        table.add_column("", min_width=12)
 
         audit_skipped = 0
         audit_benched = 0
@@ -518,10 +604,14 @@ def render_audit_report(console: Console, report: AuditReport, verbose: bool) ->
                 table.add_row(
                     f"[dim]{bm.tool_name}[/dim]",
                     "[dim]skipped (args rejected)[/dim]", "", "", "", "",
+                    "[dim]● skip[/dim]",
                 )
             elif bm.errors == bm.iterations:
                 audit_benched += 1
-                table.add_row(bm.tool_name, "[red]all failed[/red]", "", "", "", "")
+                table.add_row(
+                    bm.tool_name, "[red]all failed[/red]", "", "", "", "",
+                    "[dim red]● error[/dim red]",
+                )
             else:
                 audit_benched += 1
                 p99c = _latency_color(bm.p99_ms)
@@ -532,6 +622,7 @@ def render_audit_report(console: Console, report: AuditReport, verbose: bool) ->
                     f"[{p99c}]{_fmt_ms(bm.p99_ms)}[/{p99c}]",
                     _fmt_ms(bm.min_ms),
                     _fmt_ms(bm.max_ms),
+                    _bench_status_dot(bm.p99_ms),
                 )
 
         console.print(table)
@@ -550,9 +641,15 @@ def render_audit_report(console: Console, report: AuditReport, verbose: bool) ->
     console.print(f"  Connection: {conn:.0f}ms · Discovery: {disc:.0f}ms · Total: {total:.1f}s")
 
     if report.total_failed > 0:
-        console.print(f"\n  [bold red]FAIL[/bold red] Score: {score}/100")
+        console.print(Panel(
+            f"  [bold red]✗  FAIL[/bold red]   Score: {score}/100",
+            border_style="red", expand=False, padding=(0, 1),
+        ))
     else:
-        console.print(f"\n  [bold green]PASS[/bold green] Score: {score}/100")
+        console.print(Panel(
+            f"  [bold green]✓  PASS[/bold green]   Score: {score}/100",
+            border_style="green", expand=False, padding=(0, 1),
+        ))
     console.print()
 
 
@@ -723,55 +820,92 @@ _HTML_TEMPLATE = """\
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>mcp-halflist — {title}</title>
 <style>
+:root{{
+  --bg:#0a0a0a;--surface:#111111;--border:#1a1a1a;
+  --green:#00ff41;--green-dim:#4a7a4a;
+  --red:#ff0040;--amber:#ffaa00;--gray:#555555;--cyan:#00ccff;
+  --text:#c0c0c0;
+  --font-mono:'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+  --font-sans:'Inter',-apple-system,system-ui,sans-serif;
+}}
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  background:#0d1117;color:#c9d1d9;line-height:1.5;padding:2rem}}
+body{{font-family:var(--font-sans);background:var(--bg);color:var(--text);line-height:1.6;padding:2rem}}
 .container{{max-width:900px;margin:0 auto}}
-h1{{font-size:1.5rem;margin-bottom:.25rem}}
-.subtitle{{color:#8b949e;font-size:.875rem;margin-bottom:1.5rem}}
-.card{{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:1.25rem;margin-bottom:1rem}}
-.card h2{{font-size:1.1rem;margin-bottom:.75rem;color:#e6edf3}}
-.meta-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.5rem .75rem;margin-bottom:1rem}}
-.meta-item{{font-size:.875rem}}.meta-label{{color:#8b949e}}.meta-value{{color:#e6edf3;font-weight:600}}
+{nav_css}
+.header{{text-align:center;margin-bottom:2rem}}
+.logo{{font-family:var(--font-mono);color:var(--green);font-size:1.5rem;font-weight:700;letter-spacing:.15em;margin-bottom:.5rem}}
+.tagline{{color:var(--green-dim);font-size:.875rem}}
+.card{{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.25rem;margin-bottom:1rem}}
+.card h2{{font-family:var(--font-mono);font-size:1rem;margin-bottom:.75rem;color:var(--green-dim);text-transform:uppercase;letter-spacing:.05em}}
+.meta-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.5rem .75rem;margin-bottom:1rem;font-family:var(--font-mono);font-size:.85rem}}
+.meta-item{{display:flex;gap:.5rem}}.meta-label{{color:var(--green-dim);text-transform:uppercase;min-width:7em}}.meta-value{{color:var(--text);font-weight:600}}
 .gauge-wrap{{display:flex;align-items:center;gap:1.5rem;margin-bottom:1rem}}
 .gauge{{position:relative;width:100px;height:100px}}
 .gauge svg{{transform:rotate(-90deg)}}
-.gauge-bg{{fill:none;stroke:#30363d;stroke-width:8}}
+.gauge-bg{{fill:none;stroke:var(--border);stroke-width:8}}
 .gauge-fg{{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .6s ease}}
 .gauge-text{{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-size:1.5rem;font-weight:700}}
-.verdict{{font-size:1.25rem;font-weight:700}}
-.pass{{color:#3fb950}}.fail{{color:#f85149}}.warn{{color:#d29922}}.skip{{color:#8b949e}}
+  font-family:var(--font-mono);font-size:1.5rem;font-weight:700}}
+.verdict{{font-family:var(--font-mono);font-size:1.25rem;font-weight:700}}
+.pass{{color:var(--green)}}.fail{{color:var(--red)}}.warn{{color:var(--amber)}}.skip{{color:var(--gray)}}
 details{{margin-bottom:.5rem}}
-summary{{cursor:pointer;padding:.5rem .75rem;background:#21262d;border-radius:6px;
-  font-weight:600;font-size:.9rem;list-style:none}}
+summary{{cursor:pointer;padding:.5rem .75rem;background:var(--bg);border:1px solid var(--border);border-radius:4px;
+  font-family:var(--font-mono);font-weight:600;font-size:.85rem;list-style:none;color:var(--text)}}
+summary:hover{{border-color:var(--green-dim)}}
 summary::-webkit-details-marker{{display:none}}
-summary::before{{content:"\\25B6";display:inline-block;margin-right:.5rem;font-size:.7rem;
-  transition:transform .15s}}
+summary::before{{content:"\\25B6";display:inline-block;margin-right:.5rem;font-size:.65rem;
+  color:var(--green-dim);transition:transform .15s}}
 details[open]>summary::before{{transform:rotate(90deg)}}
-.check-list{{padding:.5rem .75rem}}
-.check-row{{display:flex;align-items:baseline;gap:.5rem;padding:.25rem 0;font-size:.875rem;
-  border-bottom:1px solid #21262d}}
-.check-row:last-child{{border-bottom:none}}
+.check-list{{padding:.5rem 0}}
+.check-row{{display:flex;align-items:baseline;gap:.5rem;padding:.35rem .75rem;font-family:var(--font-mono);
+  font-size:.8rem;border-radius:3px;transition:background .1s}}
+.check-row:hover{{background:#151515}}
 .check-icon{{width:1.2em;text-align:center;flex-shrink:0}}
-.check-name{{flex:1}}.check-msg{{color:#8b949e;text-align:right;max-width:50%;word-break:break-word}}
-table{{width:100%;border-collapse:collapse;font-size:.875rem}}
-th{{text-align:left;padding:.5rem .75rem;border-bottom:2px solid #30363d;color:#8b949e;font-weight:600}}
-td{{padding:.5rem .75rem;border-bottom:1px solid #21262d}}
-.bar-cell{{width:40%}}
-.bar-wrap{{background:#21262d;border-radius:3px;height:18px;position:relative;overflow:hidden}}
-.bar-fill{{height:100%;border-radius:3px;transition:width .4s ease}}
-.bar-label{{position:absolute;right:6px;top:0;line-height:18px;font-size:.75rem;color:#e6edf3}}
-.summary-row{{display:flex;gap:1.5rem;flex-wrap:wrap;font-size:.875rem;color:#8b949e;margin-top:.75rem}}
-.footer{{text-align:center;color:#484f58;font-size:.75rem;margin-top:2rem}}
+.check-name{{flex:1;color:var(--text)}}
+.dot-leader{{flex:1;border-bottom:1px dotted #333333;margin:0 .5rem;min-width:2rem;align-self:center}}
+.check-msg{{color:var(--gray);text-align:right;white-space:nowrap}}
+table{{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:.8rem}}
+th{{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--border);color:var(--green-dim);
+  font-weight:600;text-transform:uppercase;letter-spacing:.05em}}
+td{{padding:.5rem .75rem;border-bottom:1px solid var(--border);color:var(--text)}}
+tr:hover td{{background:#151515}}
+.bar-cell{{width:35%}}
+.bar-wrap{{background:var(--border);border-radius:2px;height:16px;position:relative;overflow:hidden}}
+.bar-fill{{height:100%;border-radius:2px;transition:width .4s ease}}
+.bar-label{{position:absolute;right:6px;top:0;line-height:16px;font-size:.7rem;color:var(--text)}}
+.summary-row{{display:flex;gap:1.5rem;flex-wrap:wrap;font-family:var(--font-mono);font-size:.8rem;color:var(--green-dim);margin-top:.75rem}}
+.footer{{text-align:center;color:var(--green-dim);font-family:var(--font-mono);font-size:.75rem;margin-top:2rem}}
+.footer a{{color:var(--cyan);text-decoration:none}}.footer a:hover{{text-decoration:underline}}
+.scanline{{position:fixed;top:0;left:0;width:100%;height:2px;background:var(--green);
+  pointer-events:none;z-index:9999;animation:scanline 2s ease-out forwards}}
+@keyframes scanline{{0%{{top:0;opacity:.3}}100%{{top:100%;opacity:0}}}}
+@media print{{
+  body{{background:#fff;color:#000}}
+  .scanline,.topnav{{display:none}}
+  .card{{background:#fafafa;border-color:#ddd}}
+  .pass{{color:#16a34a}}.fail{{color:#dc2626}}.warn{{color:#ca8a04}}.skip{{color:#888}}
+  .logo{{color:#333}}.tagline,.meta-label,.footer{{color:#666}}
+  .meta-value,.check-name,.verdict{{color:#000}}
+  th{{color:#666;border-color:#ddd}}td{{border-color:#eee;color:#000}}
+  tr:hover td{{background:transparent}}
+  .check-row:hover{{background:transparent}}
+  .bar-wrap{{background:#eee}}
+  details{{break-inside:avoid}}
+  details[open]{{display:block}}
+  summary{{background:#f5f5f5;border-color:#ddd;color:#000}}
+}}
 </style>
 </head>
 <body>
+<div class="scanline"></div>
+{nav_html}
 <div class="container">
-<h1>mcp-halflist</h1>
-<p class="subtitle">Lint your MCP server before your users do.</p>
+<div class="header">
+<div class="logo">HALFLIST</div>
+<p class="tagline">Lint your MCP server before your users do.</p>
+</div>
 {body}
-<p class="footer">Generated by mcp-halflist v{version}</p>
+<p class="footer">Generated by mcp-halflist v{version} · <a href="https://github.com/abhishekhsingh/mcp-halflist">GitHub</a></p>
 </div>
 </body>
 </html>"""
@@ -779,10 +913,10 @@ td{{padding:.5rem .75rem;border-bottom:1px solid #21262d}}
 
 def _score_color_hex(score: int) -> str:
     if score >= 80:
-        return "#3fb950"
+        return "#00ff41"
     if score >= 50:
-        return "#d29922"
-    return "#f85149"
+        return "#ffaa00"
+    return "#ff0040"
 
 
 def _score_gauge_svg(score: int) -> str:
@@ -799,6 +933,14 @@ def _score_gauge_svg(score: int) -> str:
     )
 
 
+_HTML_SECURITY_LABELS: dict[str, tuple[str, str]] = {
+    "PASS": ("CLEAN", "pass"),
+    "FAIL": ("THREAT DETECTED", "fail"),
+    "SKIP": ("NOT REQUESTED", "skip"),
+    "WARN": ("WARN", "warn"),
+}
+
+
 def _status_icon(status: str) -> str:
     if status == "PASS":
         return '<span class="check-icon pass">&#10003;</span>'
@@ -813,29 +955,48 @@ def _render_suites_html(suites: list[dict[str, Any]]) -> str:
     parts: list[str] = []
     for s in suites:
         name = _html_escape(s["name"])
+        name_upper = name.upper()
         passed = s["passed"]
         total = len(s.get("checks", []))
-        dur = s.get("duration_ms", 0) / 1000
-        summary_extra = ""
+        is_security = name.lower() == "security"
+
         if s.get("failed", 0) > 0:
-            summary_extra += f' <span class="fail">&#10007; {s["failed"]}</span>'
-        if s.get("warned", 0) > 0:
-            summary_extra += f' <span class="warn">&#9888; {s["warned"]}</span>'
+            rule_cls = "fail"
+            suffix = "&#10007;"
+        elif s.get("warned", 0) > 0:
+            rule_cls = "warn"
+            suffix = "&#9888;"
+        else:
+            rule_cls = "pass"
+            suffix = "&#10003;"
+
+        rule_fill = "━" * max(2, 40 - len(name_upper))
+        summary_line = (
+            f'<span class="{rule_cls}">━━ {name_upper} {rule_fill}'
+            f' {passed}/{total} {suffix}</span>'
+        )
 
         checks_html = ""
         for c in s.get("checks", []):
             icon = _status_icon(c["status"])
             cname = _html_escape(c["name"])
-            msg = _html_escape(c.get("message") or c["status"])
+            if is_security:
+                label, label_cls = _HTML_SECURITY_LABELS.get(
+                    c["status"], (c["status"], "skip"),
+                )
+                msg_html = f'<span class="check-msg {label_cls}">{label}</span>'
+            else:
+                raw_msg = c.get("message") or c["status"]
+                msg_html = f'<span class="check-msg">{_html_escape(raw_msg)}</span>'
             checks_html += (
                 f'<div class="check-row">{icon}'
                 f'<span class="check-name">{cname}</span>'
-                f'<span class="check-msg">{msg}</span></div>\n'
+                f'<span class="dot-leader"></span>'
+                f'{msg_html}</div>\n'
             )
 
         parts.append(
-            f'<details><summary>{name} &mdash; {passed}/{total} passed'
-            f' &middot; {dur:.1f}s{summary_extra}</summary>\n'
+            f'<details><summary>{summary_line}</summary>\n'
             f'<div class="check-list">{checks_html}</div></details>\n'
         )
     return "".join(parts)
@@ -843,10 +1004,10 @@ def _render_suites_html(suites: list[dict[str, Any]]) -> str:
 
 def _latency_bar_color(ms: float) -> str:
     if ms > 1000:
-        return "#f85149"
+        return "#ff0040"
     if ms > 500:
-        return "#d29922"
-    return "#3fb950"
+        return "#ffaa00"
+    return "#00ff41"
 
 
 def _render_bench_table_html(benchmarks: list[dict[str, Any]]) -> str:
@@ -863,7 +1024,7 @@ def _render_bench_table_html(benchmarks: list[dict[str, Any]]) -> str:
         name = _html_escape(bm["tool_name"])
         if bm.get("skipped"):
             rows += (
-                f'<tr style="color:#8b949e"><td>{name}</td>'
+                f'<tr style="color:#555555"><td>{name}</td>'
                 f'<td colspan="6" style="font-style:italic">skipped (args rejected)</td></tr>\n'
             )
             continue
@@ -915,6 +1076,8 @@ def render_check_html(data: dict[str, Any]) -> str:
         title=f"{name} — Conformance",
         body=body,
         version=data.get("version", "?"),
+        nav_css="",
+        nav_html="",
     )
 
 
@@ -941,6 +1104,8 @@ def render_bench_html(data: dict[str, Any]) -> str:
         title=f"{name} — Benchmark",
         body=body,
         version=data.get("version", "?"),
+        nav_css="",
+        nav_html="",
     )
 
 
@@ -967,19 +1132,35 @@ def render_audit_html(data: dict[str, Any]) -> str:
     body += f'<div class="meta-item"><span class="meta-label">Iterations:</span> <span class="meta-value">{data.get("iterations", 0)}</span></div>'
     body += '</div></div>\n'
 
-    body += '<div class="card"><h2>Conformance</h2>\n'
+    body += '<div class="card" id="conformance"><h2>Conformance</h2>\n'
     body += _render_suites_html(data.get("suites", []))
     body += '</div>\n'
 
-    if data.get("benchmarks"):
-        body += '<div class="card"><h2>Latency per Tool</h2>\n'
+    has_bench = bool(data.get("benchmarks"))
+    if has_bench:
+        body += '<div class="card" id="latency"><h2>Latency per Tool</h2>\n'
         body += _render_bench_table_html(data.get("benchmarks", []))
         body += '</div>\n'
+
+    nav_css = (
+        '.topnav{position:fixed;top:0;left:0;right:0;background:var(--bg);border-bottom:1px solid var(--border);'
+        'padding:.5rem 1rem;z-index:1000;display:flex;align-items:center;gap:1.5rem;font-family:var(--font-mono);font-size:.8rem}'
+        '.topnav .nav-brand{color:var(--green);font-weight:700}'
+        '.topnav a{color:var(--green-dim);text-decoration:none;text-transform:uppercase;letter-spacing:.05em}'
+        '.topnav a:hover{color:var(--green)}'
+        'body{padding-top:3.5rem}'
+    )
+    nav_links = '<a href="#conformance">Conformance</a>'
+    if has_bench:
+        nav_links += '<a href="#latency">Latency</a>'
+    nav_html = f'<nav class="topnav"><span class="nav-brand">halflist</span>{nav_links}</nav>'
 
     return _HTML_TEMPLATE.format(
         title=f"{name} — Audit",
         body=body,
         version=data.get("version", "?"),
+        nav_css=nav_css,
+        nav_html=nav_html,
     )
 
 
@@ -1038,9 +1219,10 @@ def render_badge_svg(data: dict[str, Any]) -> str:
     elif report_type == "bench":
         label = "MCP bench"
         benchmarks = data.get("benchmarks", [])
-        bc = len(benchmarks)
-        if benchmarks:
-            avg_p50 = sum(b["median_ms"] for b in benchmarks) / bc
+        active = [b for b in benchmarks if not b.get("skipped")]
+        bc = len(active)
+        if active:
+            avg_p50 = sum(b["median_ms"] for b in active) / bc
             value = f"{bc} tools · p50 avg {avg_p50:.0f}ms"
         else:
             value = "no data"

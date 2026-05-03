@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.4.0 (2026-05-03)
+
+### Features
+- **HTTP transport** — `--http` flag with Streamable HTTP → SSE automatic fallback
+- **Authentication flags** — `--header`, `--oauth-token-url`, `--oauth-client-id`, `--oauth-client-secret`, `--oauth-scope` on all server-connecting commands
+- **Resources suite** (8 checks) — resources/list validation, uri/name checks, resources/read smoke test, content item validation, mimeType format
+- **Prompts suite** (7 checks) — prompts/list validation, name/description checks, prompts/get smoke test, message role/content validation
+
+### Visual
+- **Terminal aesthetic overhaul** — green-on-black theme, monospace styling, scan line animation in HTML reports
+- **HTML report makeover** — terminal-inspired dark theme with CSS custom properties, fixed nav on audit reports, print styles
+- **Colored status dots** in bench tables — green (fast), yellow (moderate), red (slow) based on p99 latency
+- **HALFLIST logo** in HTML reports — clean letter-spaced text replacing box-drawing ASCII art
+
+### Improvements
+- `_build_suite_map()` extracted helper removes duplicated suite registration dicts in cli.py
+- `DEFAULT_TIMEOUT` constant used consistently across cli.py, client.py, auth.py
+- `Literal["PASS", "FAIL", "WARN", "SKIP"]` for type-safe status values in suite base class
+- Security pattern refinements: `.{0,80}` bounded match instead of unbounded `.*`, HTML comment detection moved from FAIL to WARN, `.env` pattern tightened to exclude `.env.example`
+- `BaseException` catch on first HTTP transport attempt preserves SSE fallback when MCP SDK leaks CancelledError
+- Discovery failure logging for resources and prompts in `_discover()`
+- `SuiteResult` return type annotations on all suite `run()` methods
+
+### Bug Fixes
+- Double-curly-brace rendering in audit report navigation CSS
+- CancelledError propagation in HTTP transport fallback — timeouts on Streamable HTTP no longer prevent SSE fallback
+
 ## 0.3.0 (2026-04-30)
 
 ### Features
