@@ -23,6 +23,13 @@
   - `--debug-log <file>` to write debug output to a file
   - `HALFLIST_LOG_LEVEL` env var for CI environments
   - Available on all 6 commands
+- **halflist.toml config file**: optional TOML config to replace repeated CLI flags
+  - Auto-discovered from cwd (`halflist.toml`, `.halflist.toml`) or `~/.halflist/config.toml`
+  - Explicit path via `--config` flag on all 6 commands
+  - `${ENV_VAR}` expansion in all string values (secrets, URLs, file paths)
+  - CLI flags always override config; config overrides defaults
+  - Warns on unknown keys (typos) without crashing
+  - `tomli` fallback for Python 3.10 compatibility
 
 ### CI/CD
 - CI: GitHub Actions workflow with Python 3.10/3.11/3.12 matrix, ruff lint + format check, pytest

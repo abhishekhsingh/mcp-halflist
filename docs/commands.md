@@ -2,6 +2,18 @@
 
 Complete documentation for all halflist commands.
 
+## Configuration File
+
+All commands accept `--config <path>` to specify a TOML config file. Without `--config`, halflist searches these locations in order:
+
+1. `halflist.toml` in the current directory
+2. `.halflist.toml` in the current directory
+3. `~/.halflist/config.toml`
+
+If no config file is found, all defaults apply as before. CLI flags always override config values.
+
+See the full config format in the [Configuration section of the README](https://github.com/abhishekhsingh/mcp-halflist#configuration).
+
 ## Exit Codes
 
 All commands that connect to a server use the same exit codes:
@@ -66,8 +78,9 @@ Run protocol conformance and security checks against an MCP server.
 | `--verify-pins` | | off | Verify tool definitions against a saved pin snapshot |
 | `--debug` | `-d` | off | Enable debug logging to stderr |
 | `--debug-log` | | | Write debug log to file (implies `--debug`) |
+| `--config` | | | Path to halflist.toml config file |
 
-Either `--stdio` or `--http` is required. They are mutually exclusive. Auth flags (`--header`, `--oauth-*`, `--no-browser`, `--clear-tokens`, `--callback-port`, `--no-auth`) require `--http`.
+Either `--stdio` or `--http` is required (unless configured in halflist.toml). They are mutually exclusive. Auth flags (`--header`, `--oauth-*`, `--no-browser`, `--clear-tokens`, `--callback-port`, `--no-auth`) require `--http`.
 
 **Environment variable:** Set `HALFLIST_LOG_LEVEL=DEBUG` (or `INFO`, `WARNING`) to enable debug logging without `--debug`. Useful in CI environments. Applies to all commands.
 
@@ -161,8 +174,9 @@ Each tool is called with synthetically generated arguments based on its `inputSc
 | `--timeout` | | `30` | Timeout in seconds per operation (also limits each individual tool call during benchmarks) |
 | `--debug` | `-d` | off | Enable debug logging to stderr |
 | `--debug-log` | | | Write debug log to file (implies `--debug`) |
+| `--config` | | | Path to halflist.toml config file |
 
-Either `--stdio` or `--http` is required. They are mutually exclusive.
+Either `--stdio` or `--http` is required (unless configured in halflist.toml). They are mutually exclusive.
 
 ### Examples
 
@@ -239,8 +253,9 @@ Audit always runs all suites (no `--suite` filter) and benchmarks all discovered
 | `--verify-pins` | | off | Verify tool definitions against a saved pin snapshot |
 | `--debug` | `-d` | off | Enable debug logging to stderr |
 | `--debug-log` | | | Write debug log to file (implies `--debug`) |
+| `--config` | | | Path to halflist.toml config file |
 
-Either `--stdio` or `--http` is required. They are mutually exclusive.
+Either `--stdio` or `--http` is required (unless configured in halflist.toml). They are mutually exclusive.
 
 ### Examples
 
@@ -300,8 +315,9 @@ Continuously monitor an MCP server's health. Each probe opens a fresh connection
 | `--timeout` | | `30` | Timeout in seconds per operation |
 | `--debug` | `-d` | off | Enable debug logging to stderr |
 | `--debug-log` | | | Write debug log to file (implies `--debug`) |
+| `--config` | | | Path to halflist.toml config file |
 
-Either `--stdio` or `--http` is required. They are mutually exclusive.
+Either `--stdio` or `--http` is required (unless configured in halflist.toml). They are mutually exclusive.
 
 ### Examples
 
@@ -340,6 +356,7 @@ Generate markdown, HTML, or an SVG badge from a halflist JSON report file. Auto-
 | `--output` | `-o` | stdout | Write output to a file |
 | `--debug` | `-d` | off | Enable debug logging to stderr |
 | `--debug-log` | | | Write debug log to file (implies `--debug`) |
+| `--config` | | | Path to halflist.toml config file |
 
 ### Examples
 
@@ -399,8 +416,9 @@ Pins are stored in `~/.halflist/pins/<server-name>.json` by default.
 | `--timeout` | | `30` | Timeout in seconds per operation |
 | `--debug` | `-d` | off | Enable debug logging to stderr |
 | `--debug-log` | | | Write debug log to file (implies `--debug`) |
+| `--config` | | | Path to halflist.toml config file |
 
-Either `--stdio` or `--http` is required. They are mutually exclusive.
+Either `--stdio` or `--http` is required (unless configured in halflist.toml). They are mutually exclusive.
 
 ### Examples
 

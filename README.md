@@ -114,6 +114,39 @@ halflist audit --http https://example.com/mcp --debug-log debug.log
 HALFLIST_LOG_LEVEL=DEBUG halflist audit --stdio "python3 server.py"
 ```
 
+## Configuration
+
+Create a `halflist.toml` in your project root:
+
+```toml
+[server]
+transport = "stdio"
+command = "python3 my_server.py"
+
+[check]
+timeout = 30
+
+[bench]
+iterations = 20
+args_file = "args.json"
+```
+
+Then just run:
+
+```bash
+halflist check
+halflist audit
+```
+
+CLI flags override config values. Use `${ENV_VAR}` for secrets:
+
+```toml
+[server.oauth]
+client_secret = "${MCP_CLIENT_SECRET}"
+```
+
+Config file discovery order: `halflist.toml` (cwd) > `.halflist.toml` (cwd) > `~/.halflist/config.toml`. Or pass `--config path/to/file.toml` explicitly.
+
 ## Output Formats
 
 Terminal (colored, default) · JSON (`--format json`) · Markdown · HTML · SVG Badge

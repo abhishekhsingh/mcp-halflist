@@ -10,6 +10,15 @@ import typer
 from rich.console import Console
 
 from halflist import __version__
+from halflist.config import (
+    HalflistConfig,
+    load_config,
+    merge_bool,
+    merge_headers,
+    merge_int,
+    merge_optional_str,
+    merge_str,
+)
 from halflist.constants import (
     DEFAULT_TIMEOUT,
     EXIT_CONFIG_ERROR,
@@ -47,6 +56,28 @@ def main(
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
+
+
+def _resolve_server_config(
+    stdio: str | None,
+    http: str | None,
+    config: HalflistConfig | None,
+) -> tuple[str | None, str | None]:
+    """Fill stdio/http from config if CLI didn't provide them."""
+    if stdio or http or config is None:
+        return stdio, http
+    srv = config.server
+    if srv.transport is None:
+        if srv.command:
+            return srv.command, None
+        if srv.url:
+            return None, srv.url
+        return None, None
+    if srv.transport == "stdio":
+        return srv.command, None
+    if srv.transport == "http":
+        return None, srv.url
+    return None, None
 
 
 def _validate_transport(
@@ -311,7 +342,7 @@ def check(
     args_file: Optional[str] = typer.Option(
         None, "--args-file", help="JSON file mapping tool names to custom arguments."
     ),
-    format: str = typer.Option("terminal", "--format", help="Output format: terminal or json."),
+    format: Optional[str] = typer.Option(None, "--format", help="Output format: terminal or json."),
     suite: Optional[list[str]] = typer.Option(None, "--suite", help="Suite(s) to run. Repeatable."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show all check details."),
     quiet: bool = typer.Option(
@@ -320,8 +351,8 @@ def check(
         "-q",
         help="Suppress server stderr output. Auto-enabled with --format json.",
     ),
-    timeout: int = typer.Option(
-        DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."
+    timeout: Optional[int] = typer.Option(
+        None, "--timeout", help="Timeout in seconds per operation."
     ),
     verify_pins: bool = typer.Option(
         False, "--verify-pins", help="Verify tool pins against saved snapshot."
@@ -330,8 +361,38 @@ def check(
     debug_log: Optional[str] = typer.Option(
         None, "--debug-log", help="Write debug log to file (implies --debug)."
     ),
+    config_path: Optional[str] = typer.Option(
+        None, "--config", help="Path to halflist.toml config file."
+    ),
 ) -> None:
     """Run conformance checks against an MCP server."""
+    config = load_config(config_path)
+
+    stdio, http = _resolve_server_config(stdio, http, config)
+    if config:
+        header = merge_headers(header, config.server.headers)
+        oauth_token_url = merge_optional_str(oauth_token_url, config.server.oauth.token_url)
+        oauth_client_id = merge_optional_str(oauth_client_id, config.server.oauth.client_id)
+        _cfg_secret = config.server.oauth.client_secret
+        oauth_client_secret = merge_optional_str(
+            oauth_client_secret, _cfg_secret.get_secret_value() if _cfg_secret else None
+        )
+        oauth_scope = merge_optional_str(oauth_scope, config.server.oauth.scope)
+        no_browser = merge_bool(no_browser, config.server.pkce.no_browser)
+        callback_port = (
+            callback_port if callback_port is not None else config.server.pkce.callback_port
+        )
+        no_auth = merge_bool(no_auth, config.server.pkce.no_auth)
+        args_file = merge_optional_str(args_file, config.check.args_file)
+        suite = suite if suite else config.check.suites
+        verbose = merge_bool(verbose, config.check.verbose)
+        quiet = merge_bool(quiet, config.output.quiet)
+        verify_pins = merge_bool(verify_pins, config.check.verify_pins)
+        debug = merge_bool(debug, config.debug.enabled)
+        debug_log = merge_optional_str(debug_log, config.debug.log_file)
+    format = merge_str(format, config.output.format if config else None, "terminal")
+    timeout = merge_int(timeout, config.check.timeout if config else None, DEFAULT_TIMEOUT)
+
     from halflist.debug import setup_debug_logging
 
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
@@ -574,24 +635,59 @@ def bench(
         None, "--tool", help="Tool(s) to benchmark. Repeatable."
     ),
     all_tools: bool = typer.Option(False, "--all", help="Benchmark all tools (default: first 5)."),
-    iterations: int = typer.Option(10, "--iterations", "-n", help="Number of iterations per tool."),
-    warmup: int = typer.Option(2, "--warmup", "-w", help="Warmup iterations (discarded)."),
-    format: str = typer.Option("terminal", "--format", help="Output format: terminal or json."),
+    iterations: Optional[int] = typer.Option(
+        None, "--iterations", "-n", help="Number of iterations per tool."
+    ),
+    warmup: Optional[int] = typer.Option(
+        None, "--warmup", "-w", help="Warmup iterations (discarded)."
+    ),
+    format: Optional[str] = typer.Option(None, "--format", help="Output format: terminal or json."),
     quiet: bool = typer.Option(
         False,
         "--quiet",
         "-q",
         help="Suppress server stderr output. Auto-enabled with --format json.",
     ),
-    timeout: int = typer.Option(
-        DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."
+    timeout: Optional[int] = typer.Option(
+        None, "--timeout", help="Timeout in seconds per operation."
     ),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
     debug_log: Optional[str] = typer.Option(
         None, "--debug-log", help="Write debug log to file (implies --debug)."
     ),
+    config_path: Optional[str] = typer.Option(
+        None, "--config", help="Path to halflist.toml config file."
+    ),
 ) -> None:
     """Benchmark latency per tool on an MCP server."""
+    config = load_config(config_path)
+
+    stdio, http = _resolve_server_config(stdio, http, config)
+    if config:
+        header = merge_headers(header, config.server.headers)
+        oauth_token_url = merge_optional_str(oauth_token_url, config.server.oauth.token_url)
+        oauth_client_id = merge_optional_str(oauth_client_id, config.server.oauth.client_id)
+        _cfg_secret = config.server.oauth.client_secret
+        oauth_client_secret = merge_optional_str(
+            oauth_client_secret, _cfg_secret.get_secret_value() if _cfg_secret else None
+        )
+        oauth_scope = merge_optional_str(oauth_scope, config.server.oauth.scope)
+        no_browser = merge_bool(no_browser, config.server.pkce.no_browser)
+        callback_port = (
+            callback_port if callback_port is not None else config.server.pkce.callback_port
+        )
+        no_auth = merge_bool(no_auth, config.server.pkce.no_auth)
+        tool = tool if tool else config.bench.tools
+        all_tools = merge_bool(all_tools, config.bench.all)
+        args_file = merge_optional_str(args_file, config.bench.args_file)
+        quiet = merge_bool(quiet, config.output.quiet)
+        debug = merge_bool(debug, config.debug.enabled)
+        debug_log = merge_optional_str(debug_log, config.debug.log_file)
+    format = merge_str(format, config.output.format if config else None, "terminal")
+    timeout = merge_int(timeout, config.bench.timeout if config else None, DEFAULT_TIMEOUT)
+    iterations = merge_int(iterations, config.bench.iterations if config else None, 10)
+    warmup = merge_int(warmup, config.bench.warmup if config else None, 2)
+
     from halflist.debug import setup_debug_logging
 
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
@@ -853,18 +949,22 @@ def audit(
     args_file: Optional[str] = typer.Option(
         None, "--args-file", help="JSON file mapping tool names to custom arguments."
     ),
-    iterations: int = typer.Option(10, "--iterations", "-n", help="Benchmark iterations per tool."),
-    warmup: int = typer.Option(2, "--warmup", "-w", help="Warmup iterations (discarded)."),
+    iterations: Optional[int] = typer.Option(
+        None, "--iterations", "-n", help="Benchmark iterations per tool."
+    ),
+    warmup: Optional[int] = typer.Option(
+        None, "--warmup", "-w", help="Warmup iterations (discarded)."
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show all check details."),
-    format: str = typer.Option("terminal", "--format", help="Output format: terminal or json."),
+    format: Optional[str] = typer.Option(None, "--format", help="Output format: terminal or json."),
     quiet: bool = typer.Option(
         False,
         "--quiet",
         "-q",
         help="Suppress server stderr output. Auto-enabled with --format json.",
     ),
-    timeout: int = typer.Option(
-        DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."
+    timeout: Optional[int] = typer.Option(
+        None, "--timeout", help="Timeout in seconds per operation."
     ),
     verify_pins: bool = typer.Option(
         False, "--verify-pins", help="Verify tool pins against saved snapshot."
@@ -873,8 +973,39 @@ def audit(
     debug_log: Optional[str] = typer.Option(
         None, "--debug-log", help="Write debug log to file (implies --debug)."
     ),
+    config_path: Optional[str] = typer.Option(
+        None, "--config", help="Path to halflist.toml config file."
+    ),
 ) -> None:
     """Run full conformance check + benchmark in one shot."""
+    config = load_config(config_path)
+
+    stdio, http = _resolve_server_config(stdio, http, config)
+    if config:
+        header = merge_headers(header, config.server.headers)
+        oauth_token_url = merge_optional_str(oauth_token_url, config.server.oauth.token_url)
+        oauth_client_id = merge_optional_str(oauth_client_id, config.server.oauth.client_id)
+        _cfg_secret = config.server.oauth.client_secret
+        oauth_client_secret = merge_optional_str(
+            oauth_client_secret, _cfg_secret.get_secret_value() if _cfg_secret else None
+        )
+        oauth_scope = merge_optional_str(oauth_scope, config.server.oauth.scope)
+        no_browser = merge_bool(no_browser, config.server.pkce.no_browser)
+        callback_port = (
+            callback_port if callback_port is not None else config.server.pkce.callback_port
+        )
+        no_auth = merge_bool(no_auth, config.server.pkce.no_auth)
+        args_file = merge_optional_str(args_file, config.audit.args_file)
+        verbose = merge_bool(verbose, config.check.verbose)
+        quiet = merge_bool(quiet, config.output.quiet)
+        verify_pins = merge_bool(verify_pins, config.audit.verify_pins)
+        debug = merge_bool(debug, config.debug.enabled)
+        debug_log = merge_optional_str(debug_log, config.debug.log_file)
+    format = merge_str(format, config.output.format if config else None, "terminal")
+    timeout = merge_int(timeout, config.audit.timeout if config else None, DEFAULT_TIMEOUT)
+    iterations = merge_int(iterations, config.bench.iterations if config else None, 10)
+    warmup = merge_int(warmup, config.bench.warmup if config else None, 2)
+
     from halflist.debug import setup_debug_logging
 
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
@@ -1174,7 +1305,9 @@ def watch(
     no_auth: bool = typer.Option(
         False, "--no-auth", help="Skip automatic OAuth PKCE authentication."
     ),
-    interval: int = typer.Option(60, "--interval", "-i", help="Seconds between probes."),
+    interval: Optional[int] = typer.Option(
+        None, "--interval", "-i", help="Seconds between probes."
+    ),
     count: Optional[int] = typer.Option(
         None, "--count", "-c", help="Number of probes (default: infinite)."
     ),
@@ -1182,15 +1315,43 @@ def watch(
         None, "--log", "-l", help="Append JSONL probes to this file."
     ),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress server stderr output."),
-    timeout: int = typer.Option(
-        DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."
+    timeout: Optional[int] = typer.Option(
+        None, "--timeout", help="Timeout in seconds per operation."
     ),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
     debug_log: Optional[str] = typer.Option(
         None, "--debug-log", help="Write debug log to file (implies --debug)."
     ),
+    config_path: Optional[str] = typer.Option(
+        None, "--config", help="Path to halflist.toml config file."
+    ),
 ) -> None:
     """Continuously monitor an MCP server's health."""
+    config = load_config(config_path)
+
+    stdio, http = _resolve_server_config(stdio, http, config)
+    if config:
+        header = merge_headers(header, config.server.headers)
+        oauth_token_url = merge_optional_str(oauth_token_url, config.server.oauth.token_url)
+        oauth_client_id = merge_optional_str(oauth_client_id, config.server.oauth.client_id)
+        _cfg_secret = config.server.oauth.client_secret
+        oauth_client_secret = merge_optional_str(
+            oauth_client_secret, _cfg_secret.get_secret_value() if _cfg_secret else None
+        )
+        oauth_scope = merge_optional_str(oauth_scope, config.server.oauth.scope)
+        no_browser = merge_bool(no_browser, config.server.pkce.no_browser)
+        callback_port = (
+            callback_port if callback_port is not None else config.server.pkce.callback_port
+        )
+        no_auth = merge_bool(no_auth, config.server.pkce.no_auth)
+        count = count if count is not None else config.watch.count
+        log = merge_optional_str(log, config.watch.log)
+        quiet = merge_bool(quiet, config.output.quiet)
+        debug = merge_bool(debug, config.debug.enabled)
+        debug_log = merge_optional_str(debug_log, config.debug.log_file)
+    timeout = merge_int(timeout, config.watch.timeout if config else None, DEFAULT_TIMEOUT)
+    interval = merge_int(interval, config.watch.interval if config else None, 60)
+
     from halflist.debug import setup_debug_logging
 
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
@@ -1360,15 +1521,24 @@ async def _run_watch(
 @app.command()
 def report(
     json_file: Path = typer.Argument(..., help="Path to a halflist JSON report file."),
-    format: str = typer.Option("markdown", "--format", help="Output format: markdown or html."),
+    format: Optional[str] = typer.Option(None, "--format", help="Output format: markdown or html."),
     badge: bool = typer.Option(False, "--badge", help="Generate an SVG badge instead."),
     output: Optional[str] = typer.Option(None, "-o", "--output", help="Write output to file."),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
     debug_log: Optional[str] = typer.Option(
         None, "--debug-log", help="Write debug log to file (implies --debug)."
     ),
+    config_path: Optional[str] = typer.Option(
+        None, "--config", help="Path to halflist.toml config file."
+    ),
 ) -> None:
     """Generate markdown, HTML, or badge from a halflist JSON report."""
+    config = load_config(config_path)
+    if config:
+        debug = merge_bool(debug, config.debug.enabled)
+        debug_log = merge_optional_str(debug_log, config.debug.log_file)
+    format = merge_str(format, config.report.format if config else None, "markdown")
+
     from halflist.debug import setup_debug_logging
 
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
@@ -1466,15 +1636,40 @@ def pin(
         None, "-o", "--output", help="Write pin file to custom path."
     ),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress server stderr output."),
-    timeout: int = typer.Option(
-        DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."
+    timeout: Optional[int] = typer.Option(
+        None, "--timeout", help="Timeout in seconds per operation."
     ),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
     debug_log: Optional[str] = typer.Option(
         None, "--debug-log", help="Write debug log to file (implies --debug)."
     ),
+    config_path: Optional[str] = typer.Option(
+        None, "--config", help="Path to halflist.toml config file."
+    ),
 ) -> None:
     """Snapshot tool definitions for change detection."""
+    config = load_config(config_path)
+
+    stdio, http = _resolve_server_config(stdio, http, config)
+    if config:
+        header = merge_headers(header, config.server.headers)
+        oauth_token_url = merge_optional_str(oauth_token_url, config.server.oauth.token_url)
+        oauth_client_id = merge_optional_str(oauth_client_id, config.server.oauth.client_id)
+        _cfg_secret = config.server.oauth.client_secret
+        oauth_client_secret = merge_optional_str(
+            oauth_client_secret, _cfg_secret.get_secret_value() if _cfg_secret else None
+        )
+        oauth_scope = merge_optional_str(oauth_scope, config.server.oauth.scope)
+        no_browser = merge_bool(no_browser, config.server.pkce.no_browser)
+        callback_port = (
+            callback_port if callback_port is not None else config.server.pkce.callback_port
+        )
+        no_auth = merge_bool(no_auth, config.server.pkce.no_auth)
+        quiet = merge_bool(quiet, config.output.quiet)
+        debug = merge_bool(debug, config.debug.enabled)
+        debug_log = merge_optional_str(debug_log, config.debug.log_file)
+    timeout = merge_int(timeout, config.pin.timeout if config else None, DEFAULT_TIMEOUT)
+
     from halflist.debug import setup_debug_logging
 
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
