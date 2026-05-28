@@ -235,7 +235,7 @@ def render_final_report(
         panel_content = (
             f"  Server:     [bold]{server_line}[/bold]\n"
             f"  Transport:  {report.transport}\n"
-            f"  [dim](score suppressed — filtered suite run)[/dim]"
+            f"  [dim](score suppressed - filtered suite run)[/dim]"
         )
     else:
         score = report.score
@@ -359,6 +359,10 @@ def _render_check_line(console: Console, check: CheckResult) -> None:
     if check.suite == "security":
         label, label_style = _SECURITY_LABELS.get(check.status, (check.status, "dim"))
         line.append(f" {label}", style=label_style)
+        console.print(line)
+        if check.message and check.status in ("FAIL", "WARN"):
+            for finding in check.message.split("; "):
+                console.print(f"      [dim]→ {finding}[/dim]")
     else:
         detail = ""
         if check.message:
@@ -371,7 +375,7 @@ def _render_check_line(console: Console, check: CheckResult) -> None:
         else:
             line.append(f" {check.status}", style="dim")
 
-    console.print(line)
+        console.print(line)
 
 
 def render_json(report: HalflistReport) -> str:
@@ -818,7 +822,7 @@ _HTML_TEMPLATE = """\
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>mcp-halflist — {title}</title>
+<title>mcp-halflist - {title}</title>
 <style>
 :root{{
   --bg:#0a0a0a;--surface:#111111;--border:#1a1a1a;
@@ -1073,7 +1077,7 @@ def render_check_html(data: dict[str, Any]) -> str:
     body += '</div>\n'
 
     return _HTML_TEMPLATE.format(
-        title=f"{name} — Conformance",
+        title=f"{name} - Conformance",
         body=body,
         version=data.get("version", "?"),
         nav_css="",
@@ -1101,7 +1105,7 @@ def render_bench_html(data: dict[str, Any]) -> str:
     body += '</div>\n'
 
     return _HTML_TEMPLATE.format(
-        title=f"{name} — Benchmark",
+        title=f"{name} - Benchmark",
         body=body,
         version=data.get("version", "?"),
         nav_css="",
@@ -1156,7 +1160,7 @@ def render_audit_html(data: dict[str, Any]) -> str:
     nav_html = f'<nav class="topnav"><span class="nav-brand">halflist</span>{nav_links}</nav>'
 
     return _HTML_TEMPLATE.format(
-        title=f"{name} — Audit",
+        title=f"{name} - Audit",
         body=body,
         version=data.get("version", "?"),
         nav_css=nav_css,

@@ -10,7 +10,7 @@ CI-first conformance, security, and benchmarking CLI for MCP servers.
 
 ## What It Does
 
-Point it at any [MCP](https://modelcontextprotocol.io) server — stdio or HTTP — and get a scored conformance report, security vulnerability scan (prompt injection, tool poisoning, data exfiltration), and per-tool latency benchmarks. Fully offline, zero API keys, CI-native. One `pip install`, one command, done.
+Point it at any [MCP](https://modelcontextprotocol.io) server (stdio or HTTP) and get a scored conformance report, security vulnerability scan (prompt injection, tool poisoning, data exfiltration), and per-tool latency benchmarks. Fully offline, zero API keys, CI-native. One `pip install`, one command, done.
 
 ## See It In Action
 
@@ -63,6 +63,19 @@ halflist audit --http https://mcp.example.com/v1 \
   --oauth-client-id my-client \
   --oauth-client-secret my-secret
 
+# OAuth2 PKCE (automatic on 401, opens browser for authorization)
+halflist check --http https://mcp.example.com/v1
+
+# OAuth2 PKCE headless mode (prints URL instead of opening browser)
+halflist check --http https://mcp.example.com/v1 --no-browser
+
+# Skip automatic OAuth PKCE
+halflist check --http https://mcp.example.com/v1 --no-auth
+
+# Custom tool arguments for tools that need specific inputs
+# args.json: {"get_user": {"user_id": "abc123"}}
+halflist bench --http http://localhost:8080/mcp --tool get_user --args-file args.json
+
 # More real servers to try
 halflist check --stdio "npx -y @modelcontextprotocol/server-time"
 halflist check --stdio "npx -y @modelcontextprotocol/server-filesystem /tmp"
@@ -83,9 +96,22 @@ See the [full command reference](https://github.com/abhishekhsingh/mcp-halflist/
 
 ## Security Scanning
 
-halflist scans tool descriptions for prompt injection, data exfiltration instructions, cross-tool manipulation, suspicious encoding (base64, zero-width characters), and rug pull attempts via tool pinning. All scanning is fully offline — zero API calls, zero data sharing. Unlike [mcp-scan](https://github.com/invariantlabs-ai/mcp-scan) which sends tool descriptions to an external API, halflist runs entirely on your machine.
+halflist scans tool descriptions for prompt injection, data exfiltration instructions, cross-tool manipulation, suspicious encoding (base64, zero-width characters), and rug pull attempts via tool pinning. All scanning runs locally: zero API calls, zero data sharing. Unlike [mcp-scan](https://github.com/invariantlabs-ai/mcp-scan) which sends tool descriptions to an external API, halflist runs entirely on your machine.
 
 See [security scanning details](https://github.com/abhishekhsingh/mcp-halflist/blob/main/docs/security.md) for the full list of detection patterns.
+
+## Debug Logging
+
+```bash
+# Enable debug output
+halflist check --stdio "python3 server.py" --debug
+
+# Save debug log to file
+halflist audit --http https://example.com/mcp --debug-log debug.log
+
+# Environment variable (useful in CI)
+HALFLIST_LOG_LEVEL=DEBUG halflist audit --stdio "python3 server.py"
+```
 
 ## Output Formats
 

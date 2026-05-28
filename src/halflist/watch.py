@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from datetime import datetime, timezone
+from typing import Any
 
 from halflist.client import HalflistClient
 from halflist.models import WatchProbe
@@ -13,6 +14,7 @@ async def run_probe(
     stdio: str | None = None,
     http_url: str | None = None,
     headers: dict[str, str] | None = None,
+    auth: Any | None = None,
     quiet: bool,
     timeout: int,
 ) -> WatchProbe:
@@ -24,7 +26,7 @@ async def run_probe(
         if stdio:
             await client.connect_stdio(stdio)
         elif http_url:
-            await client.connect_http(http_url, headers)
+            await client.connect_http(http_url, headers, auth=auth)
         else:
             raise ValueError("Provide either stdio or http_url")
         server_info = await client.initialize()

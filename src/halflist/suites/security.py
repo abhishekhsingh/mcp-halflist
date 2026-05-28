@@ -175,19 +175,28 @@ class SecuritySuite(CheckSuite):
                 continue
 
             for pattern, label in _INJECTION_FAIL_PATTERNS:
-                if pattern.search(desc):
-                    failures.append(f"{tool.name}: {label}")
+                m = pattern.search(desc)
+                if m:
+                    snippet = m.group().strip()[:80]
+                    failures.append(f"{tool.name}: {label} - matched '{snippet}'")
 
             for pattern, label in _INJECTION_WARN_PATTERNS:
-                if pattern.search(desc):
-                    warnings.append(f"{tool.name}: {label}")
+                m = pattern.search(desc)
+                if m:
+                    snippet = m.group().strip()[:80]
+                    warnings.append(f"{tool.name}: {label} - matched '{snippet}'")
 
             if len(desc) > _INJECTION_WARN_DESC_LENGTH:
-                warnings.append(f"{tool.name}: description length {len(desc)} chars")
+                warnings.append(
+                    f"{tool.name}: description length {len(desc)} chars (limit: {_INJECTION_WARN_DESC_LENGTH})"
+                )
 
             imperative_count = len(_IMPERATIVE_VERB_PATTERN.findall(desc))
             if imperative_count > _INJECTION_WARN_IMPERATIVE_THRESHOLD:
-                warnings.append(f"{tool.name}: {imperative_count} imperative sentences")
+                warnings.append(
+                    f"{tool.name}: {imperative_count} imperative sentences"
+                    f" (limit: {_INJECTION_WARN_IMPERATIVE_THRESHOLD})"
+                )
 
         if failures:
             self.record(
@@ -214,22 +223,32 @@ class SecuritySuite(CheckSuite):
                 continue
 
             for pattern, label in _EXFIL_FAIL_PATH_PATTERNS:
-                if pattern.search(desc):
-                    failures.append(f"{tool.name}: references {label}")
+                m = pattern.search(desc)
+                if m:
+                    failures.append(f"{tool.name}: references sensitive path {label} - matched '{m.group()}'")
 
             for pattern, label in _EXFIL_FAIL_IMPERATIVE_PATTERNS:
-                if pattern.search(desc):
-                    failures.append(f"{tool.name}: {label}")
+                m = pattern.search(desc)
+                if m:
+                    snippet = m.group().strip()[:80]
+                    failures.append(f"{tool.name}: {label} - matched '{snippet}'")
 
-            if _EXFIL_WARN_HTTP.search(desc):
-                warnings.append(f"{tool.name}: contains http:// URL")
+            m = _EXFIL_WARN_HTTP.search(desc)
+            if m:
+                url_end = desc.find(" ", m.start())
+                if url_end == -1:
+                    url_end = min(m.start() + 60, len(desc))
+                url_snippet = desc[m.start():url_end].strip()[:60]
+                warnings.append(f"{tool.name}: contains http:// URL - '{url_snippet}'")
 
-            if _EXFIL_WARN_SENSITIVE_KEYWORDS.search(desc):
+            m = _EXFIL_WARN_SENSITIVE_KEYWORDS.search(desc)
+            if m:
                 has_imperative = any(
                     p.search(desc) for p, _ in _EXFIL_FAIL_IMPERATIVE_PATTERNS
                 )
                 if not has_imperative:
-                    warnings.append(f"{tool.name}: mentions sensitive keyword")
+                    warnings.append(f"{tool.name}: mentions sensitive keyword '{m.group()}'")
+
 
         if failures:
             self.record(
@@ -260,13 +279,19 @@ class SecuritySuite(CheckSuite):
                 escaped = re.escape(other)
                 for template in _CROSS_TOOL_SPECIFIC_TEMPLATES:
                     pattern_str = template.format(tool=escaped)
-                    if re.search(pattern_str, desc, re.IGNORECASE):
-                        failures.append(f"{tool.name}: manipulates {other}")
+                    m = re.search(pattern_str, desc, re.IGNORECASE)
+                    if m:
+                        snippet = m.group().strip()[:80]
+                        failures.append(
+                            f"{tool.name}: references tool '{other}' - matched '{snippet}'"
+                        )
                         break
 
             for pattern, label in _CROSS_TOOL_GENERIC_PATTERNS:
-                if pattern.search(desc):
-                    failures.append(f"{tool.name}: {label}")
+                m = pattern.search(desc)
+                if m:
+                    snippet = m.group().strip()[:80]
+                    failures.append(f"{tool.name}: {label} - matched '{snippet}'")
                     break
 
         if failures:
@@ -291,17 +316,25 @@ class SecuritySuite(CheckSuite):
                 candidate = match.group()
                 try:
                     decoded = base64.b64decode(candidate).decode("ascii")
-                    if _INSTRUCTION_WORDS.search(decoded):
-                        failures.append(f"{tool.name}: base64 decodes to instructions")
+                    kw_match = _INSTRUCTION_WORDS.search(decoded)
+                    if kw_match:
+                        decoded_preview = decoded.strip()[:60]
+                        failures.append(
+                            f"{tool.name}: base64 decodes to instructions - '{decoded_preview}'"
+                        )
                         break
                 except Exception:
                     continue
 
-            if _ZERO_WIDTH_PATTERN.search(desc):
-                failures.append(f"{tool.name}: contains zero-width characters")
+            zw_matches = _ZERO_WIDTH_PATTERN.findall(desc)
+            if zw_matches:
+                failures.append(
+                    f"{tool.name}: contains {len(zw_matches)} zero-width character(s)"
+                )
 
             if _HTML_ENTITY_PATTERN.search(desc):
-                warnings.append(f"{tool.name}: contains HTML entities")
+                entity_count = len(_HTML_ENTITY_PATTERN.findall(desc))
+                warnings.append(f"{tool.name}: contains {entity_count} HTML entit{'y' if entity_count == 1 else 'ies'}")
 
         if failures:
             self.record(
