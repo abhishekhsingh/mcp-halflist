@@ -6,7 +6,7 @@ import warnings
 from pathlib import Path
 
 import pytest
-from click.exceptions import Exit as ClickExit
+import typer
 
 from halflist.config import (
     ConfigError,
@@ -71,7 +71,7 @@ def test_load_global(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_explicit_path_missing_exits() -> None:
-    with pytest.raises(ClickExit):
+    with pytest.raises(typer.Exit):
         load_config("/nonexistent/halflist.toml")
 
 
@@ -127,7 +127,7 @@ def test_valid_toml_parses() -> None:
 def test_invalid_toml_exits(tmp_path: Path) -> None:
     bad = tmp_path / "bad.toml"
     bad.write_text("[server\nbroken")
-    with pytest.raises(ClickExit):
+    with pytest.raises(typer.Exit):
         load_config(str(bad))
 
 
@@ -151,7 +151,7 @@ def test_partial_config(tmp_path: Path) -> None:
 def test_invalid_transport_exits(tmp_path: Path) -> None:
     toml = tmp_path / "halflist.toml"
     toml.write_text('[server]\ntransport = "websocket"\n')
-    with pytest.raises(ClickExit):
+    with pytest.raises(typer.Exit):
         load_config(str(toml))
 
 
@@ -171,7 +171,7 @@ def test_missing_env_var_exits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.delenv("NONEXISTENT_VAR_12345", raising=False)
     toml = tmp_path / "halflist.toml"
     toml.write_text('[server]\nurl = "${NONEXISTENT_VAR_12345}"\n')
-    with pytest.raises(ClickExit):
+    with pytest.raises(typer.Exit):
         load_config(str(toml))
 
 
@@ -409,21 +409,21 @@ def test_env_var_in_list(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_negative_timeout_rejected(tmp_path: Path) -> None:
     toml = tmp_path / "halflist.toml"
     toml.write_text("[check]\ntimeout = -1\n")
-    with pytest.raises(ClickExit):
+    with pytest.raises(typer.Exit):
         load_config(str(toml))
 
 
 def test_zero_timeout_rejected(tmp_path: Path) -> None:
     toml = tmp_path / "halflist.toml"
     toml.write_text("[bench]\niterations = 0\n")
-    with pytest.raises(ClickExit):
+    with pytest.raises(typer.Exit):
         load_config(str(toml))
 
 
 def test_negative_interval_rejected(tmp_path: Path) -> None:
     toml = tmp_path / "halflist.toml"
     toml.write_text("[watch]\ninterval = -5\n")
-    with pytest.raises(ClickExit):
+    with pytest.raises(typer.Exit):
         load_config(str(toml))
 
 
@@ -433,14 +433,14 @@ def test_negative_interval_rejected(tmp_path: Path) -> None:
 def test_invalid_output_format_rejected(tmp_path: Path) -> None:
     toml = tmp_path / "halflist.toml"
     toml.write_text('[output]\nformat = "xml"\n')
-    with pytest.raises(ClickExit):
+    with pytest.raises(typer.Exit):
         load_config(str(toml))
 
 
 def test_invalid_report_format_rejected(tmp_path: Path) -> None:
     toml = tmp_path / "halflist.toml"
     toml.write_text('[report]\nformat = "csv"\n')
-    with pytest.raises(ClickExit):
+    with pytest.raises(typer.Exit):
         load_config(str(toml))
 
 
@@ -450,14 +450,14 @@ def test_invalid_report_format_rejected(tmp_path: Path) -> None:
 def test_stdio_without_command_rejected(tmp_path: Path) -> None:
     toml = tmp_path / "halflist.toml"
     toml.write_text('[server]\ntransport = "stdio"\n')
-    with pytest.raises(ClickExit):
+    with pytest.raises(typer.Exit):
         load_config(str(toml))
 
 
 def test_http_without_url_rejected(tmp_path: Path) -> None:
     toml = tmp_path / "halflist.toml"
     toml.write_text('[server]\ntransport = "http"\n')
-    with pytest.raises(ClickExit):
+    with pytest.raises(typer.Exit):
         load_config(str(toml))
 
 
