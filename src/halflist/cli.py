@@ -10,7 +10,13 @@ import typer
 from rich.console import Console
 
 from halflist import __version__
-from halflist.constants import DEFAULT_TIMEOUT, EXIT_CONFIG_ERROR, EXIT_FAILURE, EXIT_OK, EXIT_TRANSPORT_ERROR
+from halflist.constants import (
+    DEFAULT_TIMEOUT,
+    EXIT_CONFIG_ERROR,
+    EXIT_FAILURE,
+    EXIT_OK,
+    EXIT_TRANSPORT_ERROR,
+)
 
 app = typer.Typer(
     name="halflist",
@@ -71,7 +77,9 @@ def _validate_transport(
 
     pkce_flags = no_browser or clear_tokens or callback_port is not None or no_auth
     if pkce_flags and stdio:
-        console.print("[red]Error:[/red] --no-browser, --clear-tokens, --callback-port, and --no-auth require --http.")
+        console.print(
+            "[red]Error:[/red] --no-browser, --clear-tokens, --callback-port, and --no-auth require --http."
+        )
         return EXIT_CONFIG_ERROR
 
     oauth_flags = [oauth_token_url, oauth_client_id, oauth_client_secret]
@@ -99,7 +107,9 @@ async def _resolve_headers(
     if header:
         for h in header:
             if ": " not in h:
-                progress_console.print(f"[red]Error:[/red] Invalid header format: '{h}'. Use 'Key: Value'.")
+                progress_console.print(
+                    f"[red]Error:[/red] Invalid header format: '{h}'. Use 'Key: Value'."
+                )
                 raise typer.Exit(EXIT_CONFIG_ERROR)
             key, val = h.split(": ", 1)
             headers[key] = val
@@ -108,11 +118,16 @@ async def _resolve_headers(
         from halflist.auth import fetch_oauth_token
 
         if "Authorization" in headers:
-            progress_console.print("  [yellow]⚠[/yellow] OAuth token takes precedence over --header Authorization")
+            progress_console.print(
+                "  [yellow]⚠[/yellow] OAuth token takes precedence over --header Authorization"
+            )
 
         try:
             token = await fetch_oauth_token(
-                oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope,
+                oauth_token_url,
+                oauth_client_id,
+                oauth_client_secret,
+                oauth_scope,
             )
         except Exception as e:
             progress_console.print(f"[red]Error:[/red] OAuth token fetch failed: {e}")
@@ -240,7 +255,9 @@ def _load_tool_args(args_file: str | None) -> dict[str, dict[str, Any]] | None:
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     if not isinstance(data, dict):
-        console.print("[red]Error:[/red] Args file must be a JSON object mapping tool names to argument objects.")
+        console.print(
+            "[red]Error:[/red] Args file must be a JSON object mapping tool names to argument objects."
+        )
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     result: dict[str, dict[str, Any]] = {}
@@ -248,7 +265,9 @@ def _load_tool_args(args_file: str | None) -> dict[str, dict[str, Any]] | None:
         if key.startswith("_"):
             continue
         if not isinstance(val, dict):
-            console.print(f"[red]Error:[/red] Args for tool '{key}' must be a JSON object, got {type(val).__name__}.")
+            console.print(
+                f"[red]Error:[/red] Args for tool '{key}' must be a JSON object, got {type(val).__name__}."
+            )
             raise typer.Exit(EXIT_CONFIG_ERROR)
         result[key] = val
 
@@ -260,31 +279,61 @@ def _load_tool_args(args_file: str | None) -> dict[str, dict[str, Any]] | None:
 
 @app.command()
 def check(
-    stdio: Optional[str] = typer.Option(None, "--stdio", help="Command to launch the MCP server via stdio."),
+    stdio: Optional[str] = typer.Option(
+        None, "--stdio", help="Command to launch the MCP server via stdio."
+    ),
     http: Optional[str] = typer.Option(None, "--http", help="URL of the MCP server via HTTP."),
-    header: Optional[list[str]] = typer.Option(None, "--header", help="HTTP header (Key: Value). Repeatable."),
-    oauth_token_url: Optional[str] = typer.Option(None, "--oauth-token-url", help="OAuth2 token endpoint URL."),
-    oauth_client_id: Optional[str] = typer.Option(None, "--oauth-client-id", help="OAuth2 client ID."),
-    oauth_client_secret: Optional[str] = typer.Option(None, "--oauth-client-secret", help="OAuth2 client secret."),
+    header: Optional[list[str]] = typer.Option(
+        None, "--header", help="HTTP header (Key: Value). Repeatable."
+    ),
+    oauth_token_url: Optional[str] = typer.Option(
+        None, "--oauth-token-url", help="OAuth2 token endpoint URL."
+    ),
+    oauth_client_id: Optional[str] = typer.Option(
+        None, "--oauth-client-id", help="OAuth2 client ID."
+    ),
+    oauth_client_secret: Optional[str] = typer.Option(
+        None, "--oauth-client-secret", help="OAuth2 client secret."
+    ),
     oauth_scope: Optional[str] = typer.Option(None, "--oauth-scope", help="OAuth2 scope."),
-    no_browser: bool = typer.Option(False, "--no-browser", help="Headless mode: print auth URL instead of opening browser."),
-    clear_tokens: bool = typer.Option(False, "--clear-tokens", help="Clear stored OAuth tokens before connecting."),
-    callback_port: Optional[int] = typer.Option(None, "--callback-port", help="Port for OAuth callback server (default: 3030-3039)."),
-    no_auth: bool = typer.Option(False, "--no-auth", help="Skip automatic OAuth PKCE authentication."),
-    args_file: Optional[str] = typer.Option(None, "--args-file", help="JSON file mapping tool names to custom arguments."),
+    no_browser: bool = typer.Option(
+        False, "--no-browser", help="Headless mode: print auth URL instead of opening browser."
+    ),
+    clear_tokens: bool = typer.Option(
+        False, "--clear-tokens", help="Clear stored OAuth tokens before connecting."
+    ),
+    callback_port: Optional[int] = typer.Option(
+        None, "--callback-port", help="Port for OAuth callback server (default: 3030-3039)."
+    ),
+    no_auth: bool = typer.Option(
+        False, "--no-auth", help="Skip automatic OAuth PKCE authentication."
+    ),
+    args_file: Optional[str] = typer.Option(
+        None, "--args-file", help="JSON file mapping tool names to custom arguments."
+    ),
     format: str = typer.Option("terminal", "--format", help="Output format: terminal or json."),
     suite: Optional[list[str]] = typer.Option(None, "--suite", help="Suite(s) to run. Repeatable."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show all check details."),
     quiet: bool = typer.Option(
-        False, "--quiet", "-q", help="Suppress server stderr output. Auto-enabled with --format json."
+        False,
+        "--quiet",
+        "-q",
+        help="Suppress server stderr output. Auto-enabled with --format json.",
     ),
-    timeout: int = typer.Option(DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."),
-    verify_pins: bool = typer.Option(False, "--verify-pins", help="Verify tool pins against saved snapshot."),
+    timeout: int = typer.Option(
+        DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."
+    ),
+    verify_pins: bool = typer.Option(
+        False, "--verify-pins", help="Verify tool pins against saved snapshot."
+    ),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
-    debug_log: Optional[str] = typer.Option(None, "--debug-log", help="Write debug log to file (implies --debug)."),
+    debug_log: Optional[str] = typer.Option(
+        None, "--debug-log", help="Write debug log to file (implies --debug)."
+    ),
 ) -> None:
     """Run conformance checks against an MCP server."""
     from halflist.debug import setup_debug_logging
+
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
 
     if format not in ("terminal", "json"):
@@ -292,8 +341,16 @@ def check(
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     err = _validate_transport(
-        stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret,
-        no_browser=no_browser, clear_tokens=clear_tokens, callback_port=callback_port, no_auth=no_auth,
+        stdio,
+        http,
+        header,
+        oauth_token_url,
+        oauth_client_id,
+        oauth_client_secret,
+        no_browser=no_browser,
+        clear_tokens=clear_tokens,
+        callback_port=callback_port,
+        no_auth=no_auth,
     )
     if err is not None:
         raise typer.Exit(err)
@@ -302,9 +359,23 @@ def check(
     effective_quiet = quiet or format == "json"
     exit_code = asyncio.run(
         _run_checks(
-            stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope,
-            format, suite, verbose, effective_quiet, timeout, verify_pins,
-            no_browser=no_browser, clear_tokens=clear_tokens, callback_port=callback_port, no_auth=no_auth,
+            stdio,
+            http,
+            header,
+            oauth_token_url,
+            oauth_client_id,
+            oauth_client_secret,
+            oauth_scope,
+            format,
+            suite,
+            verbose,
+            effective_quiet,
+            timeout,
+            verify_pins,
+            no_browser=no_browser,
+            clear_tokens=clear_tokens,
+            callback_port=callback_port,
+            no_auth=no_auth,
             tool_args=tool_args,
         )
     )
@@ -347,7 +418,13 @@ async def _run_checks(
     from halflist.suites.security import SecuritySuite
 
     is_json = format == "json"
-    progress_console = Console(stderr=True) if is_json and sys.stderr.isatty() else Console(file=io.StringIO()) if is_json else console
+    progress_console = (
+        Console(stderr=True)
+        if is_json and sys.stderr.isatty()
+        else Console(file=io.StringIO())
+        if is_json
+        else console
+    )
     client = HalflistClient(timeout=timeout, quiet=quiet)
     callback_server = None
 
@@ -356,12 +433,22 @@ async def _run_checks(
             print_banner(progress_console)
 
         headers = await _resolve_headers(
-            header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope, progress_console,
+            header,
+            oauth_token_url,
+            oauth_client_id,
+            oauth_client_secret,
+            oauth_scope,
+            progress_console,
         )
 
         auth_provider, callback_server = _maybe_setup_pkce(
-            http, headers, no_auth=no_auth, no_browser=no_browser,
-            clear_tokens=clear_tokens, callback_port=callback_port, oauth_scope=oauth_scope,
+            http,
+            headers,
+            no_auth=no_auth,
+            no_browser=no_browser,
+            clear_tokens=clear_tokens,
+            callback_port=callback_port,
+            oauth_scope=oauth_scope,
         )
 
         with progress_console.status("[bold blue]Connecting to server...[/bold blue]"):
@@ -380,8 +467,12 @@ async def _run_checks(
 
         tools, resource_count, prompt_count = await _discover(client, progress_console)
         print_connection(
-            progress_console, server_info, len(tools),
-            resource_count, prompt_count, client.transport,
+            progress_console,
+            server_info,
+            len(tools),
+            resource_count,
+            prompt_count,
+            client.transport,
         )
 
         all_suites_map = _build_suite_map()
@@ -447,32 +538,62 @@ async def _run_checks(
 
 @app.command()
 def bench(
-    stdio: Optional[str] = typer.Option(None, "--stdio", help="Command to launch the MCP server via stdio."),
+    stdio: Optional[str] = typer.Option(
+        None, "--stdio", help="Command to launch the MCP server via stdio."
+    ),
     http: Optional[str] = typer.Option(None, "--http", help="URL of the MCP server via HTTP."),
-    header: Optional[list[str]] = typer.Option(None, "--header", help="HTTP header (Key: Value). Repeatable."),
-    oauth_token_url: Optional[str] = typer.Option(None, "--oauth-token-url", help="OAuth2 token endpoint URL."),
-    oauth_client_id: Optional[str] = typer.Option(None, "--oauth-client-id", help="OAuth2 client ID."),
-    oauth_client_secret: Optional[str] = typer.Option(None, "--oauth-client-secret", help="OAuth2 client secret."),
+    header: Optional[list[str]] = typer.Option(
+        None, "--header", help="HTTP header (Key: Value). Repeatable."
+    ),
+    oauth_token_url: Optional[str] = typer.Option(
+        None, "--oauth-token-url", help="OAuth2 token endpoint URL."
+    ),
+    oauth_client_id: Optional[str] = typer.Option(
+        None, "--oauth-client-id", help="OAuth2 client ID."
+    ),
+    oauth_client_secret: Optional[str] = typer.Option(
+        None, "--oauth-client-secret", help="OAuth2 client secret."
+    ),
     oauth_scope: Optional[str] = typer.Option(None, "--oauth-scope", help="OAuth2 scope."),
-    no_browser: bool = typer.Option(False, "--no-browser", help="Headless mode: print auth URL instead of opening browser."),
-    clear_tokens: bool = typer.Option(False, "--clear-tokens", help="Clear stored OAuth tokens before connecting."),
-    callback_port: Optional[int] = typer.Option(None, "--callback-port", help="Port for OAuth callback server (default: 3030-3039)."),
-    no_auth: bool = typer.Option(False, "--no-auth", help="Skip automatic OAuth PKCE authentication."),
-    args_file: Optional[str] = typer.Option(None, "--args-file", help="JSON file mapping tool names to custom arguments."),
-    tool: Optional[list[str]] = typer.Option(None, "--tool", help="Tool(s) to benchmark. Repeatable."),
+    no_browser: bool = typer.Option(
+        False, "--no-browser", help="Headless mode: print auth URL instead of opening browser."
+    ),
+    clear_tokens: bool = typer.Option(
+        False, "--clear-tokens", help="Clear stored OAuth tokens before connecting."
+    ),
+    callback_port: Optional[int] = typer.Option(
+        None, "--callback-port", help="Port for OAuth callback server (default: 3030-3039)."
+    ),
+    no_auth: bool = typer.Option(
+        False, "--no-auth", help="Skip automatic OAuth PKCE authentication."
+    ),
+    args_file: Optional[str] = typer.Option(
+        None, "--args-file", help="JSON file mapping tool names to custom arguments."
+    ),
+    tool: Optional[list[str]] = typer.Option(
+        None, "--tool", help="Tool(s) to benchmark. Repeatable."
+    ),
     all_tools: bool = typer.Option(False, "--all", help="Benchmark all tools (default: first 5)."),
     iterations: int = typer.Option(10, "--iterations", "-n", help="Number of iterations per tool."),
     warmup: int = typer.Option(2, "--warmup", "-w", help="Warmup iterations (discarded)."),
     format: str = typer.Option("terminal", "--format", help="Output format: terminal or json."),
     quiet: bool = typer.Option(
-        False, "--quiet", "-q", help="Suppress server stderr output. Auto-enabled with --format json."
+        False,
+        "--quiet",
+        "-q",
+        help="Suppress server stderr output. Auto-enabled with --format json.",
     ),
-    timeout: int = typer.Option(DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."),
+    timeout: int = typer.Option(
+        DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."
+    ),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
-    debug_log: Optional[str] = typer.Option(None, "--debug-log", help="Write debug log to file (implies --debug)."),
+    debug_log: Optional[str] = typer.Option(
+        None, "--debug-log", help="Write debug log to file (implies --debug)."
+    ),
 ) -> None:
     """Benchmark latency per tool on an MCP server."""
     from halflist.debug import setup_debug_logging
+
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
 
     if format not in ("terminal", "json"):
@@ -480,8 +601,16 @@ def bench(
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     err = _validate_transport(
-        stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret,
-        no_browser=no_browser, clear_tokens=clear_tokens, callback_port=callback_port, no_auth=no_auth,
+        stdio,
+        http,
+        header,
+        oauth_token_url,
+        oauth_client_id,
+        oauth_client_secret,
+        no_browser=no_browser,
+        clear_tokens=clear_tokens,
+        callback_port=callback_port,
+        no_auth=no_auth,
     )
     if err is not None:
         raise typer.Exit(err)
@@ -490,9 +619,24 @@ def bench(
     effective_quiet = quiet or format == "json"
     exit_code = asyncio.run(
         _run_bench(
-            stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope,
-            tool, all_tools, iterations, warmup, format, effective_quiet, timeout,
-            no_browser=no_browser, clear_tokens=clear_tokens, callback_port=callback_port, no_auth=no_auth,
+            stdio,
+            http,
+            header,
+            oauth_token_url,
+            oauth_client_id,
+            oauth_client_secret,
+            oauth_scope,
+            tool,
+            all_tools,
+            iterations,
+            warmup,
+            format,
+            effective_quiet,
+            timeout,
+            no_browser=no_browser,
+            clear_tokens=clear_tokens,
+            callback_port=callback_port,
+            no_auth=no_auth,
             tool_args=tool_args,
         )
     )
@@ -529,10 +673,22 @@ async def _run_bench(
     from halflist.bench import bench_tool, select_tools
     from halflist.client import HalflistClient
     from halflist.models import BenchReport, ToolBenchmark
-    from halflist.report import BenchLiveProgress, print_banner, print_connection, render_bench_json, render_bench_report
+    from halflist.report import (
+        BenchLiveProgress,
+        print_banner,
+        print_connection,
+        render_bench_json,
+        render_bench_report,
+    )
 
     is_json = format == "json"
-    progress_console = Console(stderr=True) if is_json and sys.stderr.isatty() else Console(file=io.StringIO()) if is_json else console
+    progress_console = (
+        Console(stderr=True)
+        if is_json and sys.stderr.isatty()
+        else Console(file=io.StringIO())
+        if is_json
+        else console
+    )
     client = HalflistClient(timeout=timeout, quiet=quiet)
     callback_server = None
 
@@ -541,12 +697,22 @@ async def _run_bench(
             print_banner(progress_console)
 
         headers = await _resolve_headers(
-            header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope, progress_console,
+            header,
+            oauth_token_url,
+            oauth_client_id,
+            oauth_client_secret,
+            oauth_scope,
+            progress_console,
         )
 
         auth_provider, callback_server = _maybe_setup_pkce(
-            http, headers, no_auth=no_auth, no_browser=no_browser,
-            clear_tokens=clear_tokens, callback_port=callback_port, oauth_scope=oauth_scope,
+            http,
+            headers,
+            no_auth=no_auth,
+            no_browser=no_browser,
+            clear_tokens=clear_tokens,
+            callback_port=callback_port,
+            oauth_scope=oauth_scope,
         )
 
         with progress_console.status("[bold blue]Connecting to server...[/bold blue]"):
@@ -575,7 +741,9 @@ async def _run_bench(
 
         selected = select_tools(all_tool_list, tool_names, bench_all)
 
-        print_connection(progress_console, server_info, len(all_tool_list), transport=client.transport)
+        print_connection(
+            progress_console, server_info, len(all_tool_list), transport=client.transport
+        )
 
         if not selected:
             progress_console.print("  [yellow]No tools to benchmark.[/yellow]")
@@ -584,9 +752,7 @@ async def _run_bench(
         bench_start = time.monotonic()
         benchmarks: list[ToolBenchmark] = []
 
-        progress = BenchLiveProgress(
-            [t.name for t in selected], iterations
-        )
+        progress = BenchLiveProgress([t.name for t in selected], iterations)
 
         with Live(
             progress, console=progress_console, transient=True, refresh_per_second=12
@@ -601,8 +767,13 @@ async def _run_bench(
 
                 custom = tool_args.get(t.name) if tool_args else None
                 result = await bench_tool(
-                    client, t, iterations, warmup, on_call=on_call,
-                    call_timeout=float(timeout), custom_args=custom,
+                    client,
+                    t,
+                    iterations,
+                    warmup,
+                    on_call=on_call,
+                    call_timeout=float(timeout),
+                    custom_args=custom,
                 )
                 benchmarks.append(result)
                 if result.skipped:
@@ -650,32 +821,62 @@ async def _run_bench(
 
 @app.command()
 def audit(
-    stdio: Optional[str] = typer.Option(None, "--stdio", help="Command to launch the MCP server via stdio."),
+    stdio: Optional[str] = typer.Option(
+        None, "--stdio", help="Command to launch the MCP server via stdio."
+    ),
     http: Optional[str] = typer.Option(None, "--http", help="URL of the MCP server via HTTP."),
-    header: Optional[list[str]] = typer.Option(None, "--header", help="HTTP header (Key: Value). Repeatable."),
-    oauth_token_url: Optional[str] = typer.Option(None, "--oauth-token-url", help="OAuth2 token endpoint URL."),
-    oauth_client_id: Optional[str] = typer.Option(None, "--oauth-client-id", help="OAuth2 client ID."),
-    oauth_client_secret: Optional[str] = typer.Option(None, "--oauth-client-secret", help="OAuth2 client secret."),
+    header: Optional[list[str]] = typer.Option(
+        None, "--header", help="HTTP header (Key: Value). Repeatable."
+    ),
+    oauth_token_url: Optional[str] = typer.Option(
+        None, "--oauth-token-url", help="OAuth2 token endpoint URL."
+    ),
+    oauth_client_id: Optional[str] = typer.Option(
+        None, "--oauth-client-id", help="OAuth2 client ID."
+    ),
+    oauth_client_secret: Optional[str] = typer.Option(
+        None, "--oauth-client-secret", help="OAuth2 client secret."
+    ),
     oauth_scope: Optional[str] = typer.Option(None, "--oauth-scope", help="OAuth2 scope."),
-    no_browser: bool = typer.Option(False, "--no-browser", help="Headless mode: print auth URL instead of opening browser."),
-    clear_tokens: bool = typer.Option(False, "--clear-tokens", help="Clear stored OAuth tokens before connecting."),
-    callback_port: Optional[int] = typer.Option(None, "--callback-port", help="Port for OAuth callback server (default: 3030-3039)."),
-    no_auth: bool = typer.Option(False, "--no-auth", help="Skip automatic OAuth PKCE authentication."),
-    args_file: Optional[str] = typer.Option(None, "--args-file", help="JSON file mapping tool names to custom arguments."),
+    no_browser: bool = typer.Option(
+        False, "--no-browser", help="Headless mode: print auth URL instead of opening browser."
+    ),
+    clear_tokens: bool = typer.Option(
+        False, "--clear-tokens", help="Clear stored OAuth tokens before connecting."
+    ),
+    callback_port: Optional[int] = typer.Option(
+        None, "--callback-port", help="Port for OAuth callback server (default: 3030-3039)."
+    ),
+    no_auth: bool = typer.Option(
+        False, "--no-auth", help="Skip automatic OAuth PKCE authentication."
+    ),
+    args_file: Optional[str] = typer.Option(
+        None, "--args-file", help="JSON file mapping tool names to custom arguments."
+    ),
     iterations: int = typer.Option(10, "--iterations", "-n", help="Benchmark iterations per tool."),
     warmup: int = typer.Option(2, "--warmup", "-w", help="Warmup iterations (discarded)."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show all check details."),
     format: str = typer.Option("terminal", "--format", help="Output format: terminal or json."),
     quiet: bool = typer.Option(
-        False, "--quiet", "-q", help="Suppress server stderr output. Auto-enabled with --format json."
+        False,
+        "--quiet",
+        "-q",
+        help="Suppress server stderr output. Auto-enabled with --format json.",
     ),
-    timeout: int = typer.Option(DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."),
-    verify_pins: bool = typer.Option(False, "--verify-pins", help="Verify tool pins against saved snapshot."),
+    timeout: int = typer.Option(
+        DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."
+    ),
+    verify_pins: bool = typer.Option(
+        False, "--verify-pins", help="Verify tool pins against saved snapshot."
+    ),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
-    debug_log: Optional[str] = typer.Option(None, "--debug-log", help="Write debug log to file (implies --debug)."),
+    debug_log: Optional[str] = typer.Option(
+        None, "--debug-log", help="Write debug log to file (implies --debug)."
+    ),
 ) -> None:
     """Run full conformance check + benchmark in one shot."""
     from halflist.debug import setup_debug_logging
+
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
 
     if format not in ("terminal", "json"):
@@ -683,8 +884,16 @@ def audit(
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     err = _validate_transport(
-        stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret,
-        no_browser=no_browser, clear_tokens=clear_tokens, callback_port=callback_port, no_auth=no_auth,
+        stdio,
+        http,
+        header,
+        oauth_token_url,
+        oauth_client_id,
+        oauth_client_secret,
+        no_browser=no_browser,
+        clear_tokens=clear_tokens,
+        callback_port=callback_port,
+        no_auth=no_auth,
     )
     if err is not None:
         raise typer.Exit(err)
@@ -693,9 +902,24 @@ def audit(
     effective_quiet = quiet or format == "json"
     exit_code = asyncio.run(
         _run_audit(
-            stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope,
-            iterations, warmup, verbose, format, effective_quiet, timeout, verify_pins,
-            no_browser=no_browser, clear_tokens=clear_tokens, callback_port=callback_port, no_auth=no_auth,
+            stdio,
+            http,
+            header,
+            oauth_token_url,
+            oauth_client_id,
+            oauth_client_secret,
+            oauth_scope,
+            iterations,
+            warmup,
+            verbose,
+            format,
+            effective_quiet,
+            timeout,
+            verify_pins,
+            no_browser=no_browser,
+            clear_tokens=clear_tokens,
+            callback_port=callback_port,
+            no_auth=no_auth,
             tool_args=tool_args,
         )
     )
@@ -744,7 +968,13 @@ async def _run_audit(
     from halflist.suites.security import SecuritySuite
 
     is_json = format == "json"
-    progress_console = Console(stderr=True) if is_json and sys.stderr.isatty() else Console(file=io.StringIO()) if is_json else console
+    progress_console = (
+        Console(stderr=True)
+        if is_json and sys.stderr.isatty()
+        else Console(file=io.StringIO())
+        if is_json
+        else console
+    )
     client = HalflistClient(timeout=timeout, quiet=quiet)
     callback_server = None
 
@@ -753,12 +983,22 @@ async def _run_audit(
             print_banner(progress_console)
 
         headers = await _resolve_headers(
-            header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope, progress_console,
+            header,
+            oauth_token_url,
+            oauth_client_id,
+            oauth_client_secret,
+            oauth_scope,
+            progress_console,
         )
 
         auth_provider, callback_server = _maybe_setup_pkce(
-            http, headers, no_auth=no_auth, no_browser=no_browser,
-            clear_tokens=clear_tokens, callback_port=callback_port, oauth_scope=oauth_scope,
+            http,
+            headers,
+            no_auth=no_auth,
+            no_browser=no_browser,
+            clear_tokens=clear_tokens,
+            callback_port=callback_port,
+            oauth_scope=oauth_scope,
         )
 
         with progress_console.status("[bold blue]Connecting to server...[/bold blue]"):
@@ -783,8 +1023,12 @@ async def _run_audit(
         discovery_ms = (time.monotonic() - t_disc) * 1000
 
         print_connection(
-            progress_console, server_info, len(all_tools),
-            resource_count, prompt_count, client.transport,
+            progress_console,
+            server_info,
+            len(all_tools),
+            resource_count,
+            prompt_count,
+            client.transport,
         )
 
         all_suites_map = _build_suite_map()
@@ -825,9 +1069,7 @@ async def _run_audit(
         benchmarks: list[ToolBenchmark] = []
 
         if all_tools:
-            bench_progress = BenchLiveProgress(
-                [t.name for t in all_tools], iterations
-            )
+            bench_progress = BenchLiveProgress([t.name for t in all_tools], iterations)
 
             with Live(
                 bench_progress, console=progress_console, transient=True, refresh_per_second=12
@@ -842,8 +1084,13 @@ async def _run_audit(
 
                     custom = tool_args.get(t.name) if tool_args else None
                     bm_result = await bench_tool(
-                        client, t, iterations, warmup, on_call=on_call,
-                        call_timeout=float(timeout), custom_args=custom,
+                        client,
+                        t,
+                        iterations,
+                        warmup,
+                        on_call=on_call,
+                        call_timeout=float(timeout),
+                        custom_args=custom,
                     )
                     benchmarks.append(bm_result)
                     if bm_result.skipped:
@@ -898,43 +1145,89 @@ async def _run_audit(
 
 @app.command()
 def watch(
-    stdio: Optional[str] = typer.Option(None, "--stdio", help="Command to launch the MCP server via stdio."),
-    http: Optional[str] = typer.Option(None, "--http", help="URL of the MCP server via HTTP."),
-    header: Optional[list[str]] = typer.Option(None, "--header", help="HTTP header (Key: Value). Repeatable."),
-    oauth_token_url: Optional[str] = typer.Option(None, "--oauth-token-url", help="OAuth2 token endpoint URL."),
-    oauth_client_id: Optional[str] = typer.Option(None, "--oauth-client-id", help="OAuth2 client ID."),
-    oauth_client_secret: Optional[str] = typer.Option(None, "--oauth-client-secret", help="OAuth2 client secret."),
-    oauth_scope: Optional[str] = typer.Option(None, "--oauth-scope", help="OAuth2 scope."),
-    no_browser: bool = typer.Option(False, "--no-browser", help="Headless mode: print auth URL instead of opening browser."),
-    clear_tokens: bool = typer.Option(False, "--clear-tokens", help="Clear stored OAuth tokens before connecting."),
-    callback_port: Optional[int] = typer.Option(None, "--callback-port", help="Port for OAuth callback server (default: 3030-3039)."),
-    no_auth: bool = typer.Option(False, "--no-auth", help="Skip automatic OAuth PKCE authentication."),
-    interval: int = typer.Option(60, "--interval", "-i", help="Seconds between probes."),
-    count: Optional[int] = typer.Option(None, "--count", "-c", help="Number of probes (default: infinite)."),
-    log: Optional[str] = typer.Option(None, "--log", "-l", help="Append JSONL probes to this file."),
-    quiet: bool = typer.Option(
-        False, "--quiet", "-q", help="Suppress server stderr output."
+    stdio: Optional[str] = typer.Option(
+        None, "--stdio", help="Command to launch the MCP server via stdio."
     ),
-    timeout: int = typer.Option(DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."),
+    http: Optional[str] = typer.Option(None, "--http", help="URL of the MCP server via HTTP."),
+    header: Optional[list[str]] = typer.Option(
+        None, "--header", help="HTTP header (Key: Value). Repeatable."
+    ),
+    oauth_token_url: Optional[str] = typer.Option(
+        None, "--oauth-token-url", help="OAuth2 token endpoint URL."
+    ),
+    oauth_client_id: Optional[str] = typer.Option(
+        None, "--oauth-client-id", help="OAuth2 client ID."
+    ),
+    oauth_client_secret: Optional[str] = typer.Option(
+        None, "--oauth-client-secret", help="OAuth2 client secret."
+    ),
+    oauth_scope: Optional[str] = typer.Option(None, "--oauth-scope", help="OAuth2 scope."),
+    no_browser: bool = typer.Option(
+        False, "--no-browser", help="Headless mode: print auth URL instead of opening browser."
+    ),
+    clear_tokens: bool = typer.Option(
+        False, "--clear-tokens", help="Clear stored OAuth tokens before connecting."
+    ),
+    callback_port: Optional[int] = typer.Option(
+        None, "--callback-port", help="Port for OAuth callback server (default: 3030-3039)."
+    ),
+    no_auth: bool = typer.Option(
+        False, "--no-auth", help="Skip automatic OAuth PKCE authentication."
+    ),
+    interval: int = typer.Option(60, "--interval", "-i", help="Seconds between probes."),
+    count: Optional[int] = typer.Option(
+        None, "--count", "-c", help="Number of probes (default: infinite)."
+    ),
+    log: Optional[str] = typer.Option(
+        None, "--log", "-l", help="Append JSONL probes to this file."
+    ),
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress server stderr output."),
+    timeout: int = typer.Option(
+        DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."
+    ),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
-    debug_log: Optional[str] = typer.Option(None, "--debug-log", help="Write debug log to file (implies --debug)."),
+    debug_log: Optional[str] = typer.Option(
+        None, "--debug-log", help="Write debug log to file (implies --debug)."
+    ),
 ) -> None:
     """Continuously monitor an MCP server's health."""
     from halflist.debug import setup_debug_logging
+
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
 
     err = _validate_transport(
-        stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret,
-        no_browser=no_browser, clear_tokens=clear_tokens, callback_port=callback_port, no_auth=no_auth,
+        stdio,
+        http,
+        header,
+        oauth_token_url,
+        oauth_client_id,
+        oauth_client_secret,
+        no_browser=no_browser,
+        clear_tokens=clear_tokens,
+        callback_port=callback_port,
+        no_auth=no_auth,
     )
     if err is not None:
         raise typer.Exit(err)
 
     exit_code = asyncio.run(
         _run_watch(
-            stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope,
-            interval, count, log, quiet, timeout,
-            no_browser=no_browser, clear_tokens=clear_tokens, callback_port=callback_port, no_auth=no_auth,
+            stdio,
+            http,
+            header,
+            oauth_token_url,
+            oauth_client_id,
+            oauth_client_secret,
+            oauth_scope,
+            interval,
+            count,
+            log,
+            quiet,
+            timeout,
+            no_browser=no_browser,
+            clear_tokens=clear_tokens,
+            callback_port=callback_port,
+            no_auth=no_auth,
         )
     )
     raise typer.Exit(exit_code)
@@ -976,12 +1269,22 @@ async def _run_watch(
     print_banner(console)
 
     headers = await _resolve_headers(
-        header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope, console,
+        header,
+        oauth_token_url,
+        oauth_client_id,
+        oauth_client_secret,
+        oauth_scope,
+        console,
     )
 
     auth_provider, callback_server = _maybe_setup_pkce(
-        http, headers, no_auth=no_auth, no_browser=no_browser,
-        clear_tokens=clear_tokens, callback_port=callback_port, oauth_scope=oauth_scope,
+        http,
+        headers,
+        no_auth=no_auth,
+        no_browser=no_browser,
+        clear_tokens=clear_tokens,
+        callback_port=callback_port,
+        oauth_scope=oauth_scope,
     )
 
     log_file = None
@@ -993,7 +1296,14 @@ async def _run_watch(
         while True:
             probe_start = time.monotonic()
             probe_task = asyncio.create_task(
-                run_probe(stdio=stdio, http_url=http, headers=headers, auth=auth_provider, quiet=quiet, timeout=timeout)
+                run_probe(
+                    stdio=stdio,
+                    http_url=http,
+                    headers=headers,
+                    auth=auth_provider,
+                    quiet=quiet,
+                    timeout=timeout,
+                )
             )
             frame = 0
 
@@ -1054,10 +1364,13 @@ def report(
     badge: bool = typer.Option(False, "--badge", help="Generate an SVG badge instead."),
     output: Optional[str] = typer.Option(None, "-o", "--output", help="Write output to file."),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
-    debug_log: Optional[str] = typer.Option(None, "--debug-log", help="Write debug log to file (implies --debug)."),
+    debug_log: Optional[str] = typer.Option(
+        None, "--debug-log", help="Write debug log to file (implies --debug)."
+    ),
 ) -> None:
     """Generate markdown, HTML, or badge from a halflist JSON report."""
     from halflist.debug import setup_debug_logging
+
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
     import json
 
@@ -1091,8 +1404,16 @@ def report(
     else:
         report_type = detect_report_type(data)
         renderers = {
-            "markdown": {"check": render_check_markdown, "bench": render_bench_markdown, "audit": render_audit_markdown},
-            "html": {"check": render_check_html, "bench": render_bench_html, "audit": render_audit_html},
+            "markdown": {
+                "check": render_check_markdown,
+                "bench": render_bench_markdown,
+                "audit": render_audit_markdown,
+            },
+            "html": {
+                "check": render_check_html,
+                "bench": render_bench_html,
+                "audit": render_audit_html,
+            },
         }
         renderer = renderers[format].get(report_type)
         if renderer is None:
@@ -1112,41 +1433,83 @@ def report(
 
 @app.command()
 def pin(
-    stdio: Optional[str] = typer.Option(None, "--stdio", help="Command to launch the MCP server via stdio."),
-    http: Optional[str] = typer.Option(None, "--http", help="URL of the MCP server via HTTP."),
-    header: Optional[list[str]] = typer.Option(None, "--header", help="HTTP header (Key: Value). Repeatable."),
-    oauth_token_url: Optional[str] = typer.Option(None, "--oauth-token-url", help="OAuth2 token endpoint URL."),
-    oauth_client_id: Optional[str] = typer.Option(None, "--oauth-client-id", help="OAuth2 client ID."),
-    oauth_client_secret: Optional[str] = typer.Option(None, "--oauth-client-secret", help="OAuth2 client secret."),
-    oauth_scope: Optional[str] = typer.Option(None, "--oauth-scope", help="OAuth2 scope."),
-    no_browser: bool = typer.Option(False, "--no-browser", help="Headless mode: print auth URL instead of opening browser."),
-    clear_tokens: bool = typer.Option(False, "--clear-tokens", help="Clear stored OAuth tokens before connecting."),
-    callback_port: Optional[int] = typer.Option(None, "--callback-port", help="Port for OAuth callback server (default: 3030-3039)."),
-    no_auth: bool = typer.Option(False, "--no-auth", help="Skip automatic OAuth PKCE authentication."),
-    output: Optional[str] = typer.Option(None, "-o", "--output", help="Write pin file to custom path."),
-    quiet: bool = typer.Option(
-        False, "--quiet", "-q", help="Suppress server stderr output."
+    stdio: Optional[str] = typer.Option(
+        None, "--stdio", help="Command to launch the MCP server via stdio."
     ),
-    timeout: int = typer.Option(DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."),
+    http: Optional[str] = typer.Option(None, "--http", help="URL of the MCP server via HTTP."),
+    header: Optional[list[str]] = typer.Option(
+        None, "--header", help="HTTP header (Key: Value). Repeatable."
+    ),
+    oauth_token_url: Optional[str] = typer.Option(
+        None, "--oauth-token-url", help="OAuth2 token endpoint URL."
+    ),
+    oauth_client_id: Optional[str] = typer.Option(
+        None, "--oauth-client-id", help="OAuth2 client ID."
+    ),
+    oauth_client_secret: Optional[str] = typer.Option(
+        None, "--oauth-client-secret", help="OAuth2 client secret."
+    ),
+    oauth_scope: Optional[str] = typer.Option(None, "--oauth-scope", help="OAuth2 scope."),
+    no_browser: bool = typer.Option(
+        False, "--no-browser", help="Headless mode: print auth URL instead of opening browser."
+    ),
+    clear_tokens: bool = typer.Option(
+        False, "--clear-tokens", help="Clear stored OAuth tokens before connecting."
+    ),
+    callback_port: Optional[int] = typer.Option(
+        None, "--callback-port", help="Port for OAuth callback server (default: 3030-3039)."
+    ),
+    no_auth: bool = typer.Option(
+        False, "--no-auth", help="Skip automatic OAuth PKCE authentication."
+    ),
+    output: Optional[str] = typer.Option(
+        None, "-o", "--output", help="Write pin file to custom path."
+    ),
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress server stderr output."),
+    timeout: int = typer.Option(
+        DEFAULT_TIMEOUT, "--timeout", help="Timeout in seconds per operation."
+    ),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
-    debug_log: Optional[str] = typer.Option(None, "--debug-log", help="Write debug log to file (implies --debug)."),
+    debug_log: Optional[str] = typer.Option(
+        None, "--debug-log", help="Write debug log to file (implies --debug)."
+    ),
 ) -> None:
     """Snapshot tool definitions for change detection."""
     from halflist.debug import setup_debug_logging
+
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
 
     err = _validate_transport(
-        stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret,
-        no_browser=no_browser, clear_tokens=clear_tokens, callback_port=callback_port, no_auth=no_auth,
+        stdio,
+        http,
+        header,
+        oauth_token_url,
+        oauth_client_id,
+        oauth_client_secret,
+        no_browser=no_browser,
+        clear_tokens=clear_tokens,
+        callback_port=callback_port,
+        no_auth=no_auth,
     )
     if err is not None:
         raise typer.Exit(err)
 
     exit_code = asyncio.run(
         _run_pin(
-            stdio, http, header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope,
-            output, quiet, timeout,
-            no_browser=no_browser, clear_tokens=clear_tokens, callback_port=callback_port, no_auth=no_auth,
+            stdio,
+            http,
+            header,
+            oauth_token_url,
+            oauth_client_id,
+            oauth_client_secret,
+            oauth_scope,
+            output,
+            quiet,
+            timeout,
+            no_browser=no_browser,
+            clear_tokens=clear_tokens,
+            callback_port=callback_port,
+            no_auth=no_auth,
         )
     )
     raise typer.Exit(exit_code)
@@ -1184,12 +1547,22 @@ async def _run_pin(
         print_banner(console)
 
         headers = await _resolve_headers(
-            header, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope, console,
+            header,
+            oauth_token_url,
+            oauth_client_id,
+            oauth_client_secret,
+            oauth_scope,
+            console,
         )
 
         auth_provider, callback_server = _maybe_setup_pkce(
-            http, headers, no_auth=no_auth, no_browser=no_browser,
-            clear_tokens=clear_tokens, callback_port=callback_port, oauth_scope=oauth_scope,
+            http,
+            headers,
+            no_auth=no_auth,
+            no_browser=no_browser,
+            clear_tokens=clear_tokens,
+            callback_port=callback_port,
+            oauth_scope=oauth_scope,
         )
 
         with console.status("[bold blue]Connecting to server...[/bold blue]"):

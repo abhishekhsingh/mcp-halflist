@@ -44,8 +44,13 @@ async def bench_tool(
         return ToolBenchmark(
             tool_name=tool.name,
             iterations=0,
-            min_ms=0, max_ms=0, mean_ms=0, median_ms=0,
-            p95_ms=0, p99_ms=0, errors=0,
+            min_ms=0,
+            max_ms=0,
+            mean_ms=0,
+            median_ms=0,
+            p95_ms=0,
+            p99_ms=0,
+            errors=0,
             skipped=True,
             skip_reason="all warmup calls failed",
         )
@@ -78,8 +83,13 @@ async def bench_tool(
         return ToolBenchmark(
             tool_name=tool.name,
             iterations=iterations,
-            min_ms=0, max_ms=0, mean_ms=0, median_ms=0,
-            p95_ms=0, p99_ms=0, errors=errors,
+            min_ms=0,
+            max_ms=0,
+            mean_ms=0,
+            median_ms=0,
+            p95_ms=0,
+            p99_ms=0,
+            errors=errors,
         )
 
     raw_latencies = [round(v, 2) for v in latencies]

@@ -53,9 +53,7 @@ async def test_security_passes_good_server(good_client: HalflistClient) -> None:
 
 async def test_pin_verification_no_pin_file(poisoned_client: HalflistClient) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
-        suite = SecuritySuite(
-            poisoned_client, verify_pins=True, pins_dir=Path(tmpdir)
-        )
+        suite = SecuritySuite(poisoned_client, verify_pins=True, pins_dir=Path(tmpdir))
         result = await suite.run()
 
         check_map = {c.name: c for c in result.checks}
@@ -80,9 +78,7 @@ async def test_pin_verification_matching(good_client: HalflistClient) -> None:
         pin_file = Path(tmpdir) / "good-test-server.json"
         pin_file.write_text(json.dumps({"tool_hashes": tool_hashes}))
 
-        suite = SecuritySuite(
-            good_client, verify_pins=True, pins_dir=Path(tmpdir)
-        )
+        suite = SecuritySuite(good_client, verify_pins=True, pins_dir=Path(tmpdir))
         result = await suite.run()
 
         check_map = {c.name: c for c in result.checks}
@@ -97,9 +93,7 @@ async def test_pin_verification_changed(good_client: HalflistClient) -> None:
         pin_file = Path(tmpdir) / "good-test-server.json"
         pin_file.write_text(json.dumps({"tool_hashes": fake_hashes}))
 
-        suite = SecuritySuite(
-            good_client, verify_pins=True, pins_dir=Path(tmpdir)
-        )
+        suite = SecuritySuite(good_client, verify_pins=True, pins_dir=Path(tmpdir))
         result = await suite.run()
 
         check_map = {c.name: c for c in result.checks}

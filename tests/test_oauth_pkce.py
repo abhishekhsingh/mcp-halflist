@@ -195,7 +195,9 @@ class TestFileTokenStorage:
         assert dir_mode == 0o700
 
     @pytest.mark.asyncio
-    async def test_different_urls_different_files(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_different_urls_different_files(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
         s1 = FileTokenStorage("http://example.com/a")
         s2 = FileTokenStorage("http://example.com/b")
@@ -225,9 +227,7 @@ class TestCreateOAuthProvider:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            provider, server, storage = create_oauth_provider(
-                "http://example.com/mcp"
-            )
+            provider, server, storage = create_oauth_provider("http://example.com/mcp")
             assert server.port >= 3030
             assert provider is not None
             assert storage is not None
@@ -241,7 +241,8 @@ class TestCreateOAuthProvider:
         asyncio.set_event_loop(loop)
         try:
             provider, server, storage = create_oauth_provider(
-                "http://example.com/mcp", callback_port=3037,
+                "http://example.com/mcp",
+                callback_port=3037,
             )
             assert server.port == 3037
         finally:
@@ -260,7 +261,8 @@ class TestCreateOAuthProvider:
 
         try:
             provider, server, storage = create_oauth_provider(
-                "http://example.com/mcp", clear_tokens=True,
+                "http://example.com/mcp",
+                clear_tokens=True,
             )
             assert not storage._path.exists()
         finally:
@@ -272,7 +274,8 @@ class TestCreateOAuthProvider:
         asyncio.set_event_loop(loop)
         try:
             provider, server, storage = create_oauth_provider(
-                "http://example.com/mcp", no_browser=True,
+                "http://example.com/mcp",
+                no_browser=True,
             )
             assert provider is not None
         finally:
@@ -287,58 +290,108 @@ class TestCreateOAuthProvider:
 class TestCLIPKCEFlags:
     def test_no_browser_requires_http(self) -> None:
         cmd = f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"
-        result = runner.invoke(app, [
-            "check", "--stdio", cmd, "--no-browser",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "check",
+                "--stdio",
+                cmd,
+                "--no-browser",
+            ],
+        )
         assert result.exit_code == 3
 
     def test_clear_tokens_requires_http(self) -> None:
         cmd = f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"
-        result = runner.invoke(app, [
-            "check", "--stdio", cmd, "--clear-tokens",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "check",
+                "--stdio",
+                cmd,
+                "--clear-tokens",
+            ],
+        )
         assert result.exit_code == 3
 
     def test_callback_port_requires_http(self) -> None:
         cmd = f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"
-        result = runner.invoke(app, [
-            "check", "--stdio", cmd, "--callback-port", "3035",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "check",
+                "--stdio",
+                cmd,
+                "--callback-port",
+                "3035",
+            ],
+        )
         assert result.exit_code == 3
 
     def test_no_auth_requires_http(self) -> None:
         cmd = f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"
-        result = runner.invoke(app, [
-            "check", "--stdio", cmd, "--no-auth",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "check",
+                "--stdio",
+                cmd,
+                "--no-auth",
+            ],
+        )
         assert result.exit_code == 3
 
     def test_bench_pkce_flags_require_http(self) -> None:
         cmd = f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"
-        result = runner.invoke(app, [
-            "bench", "--stdio", cmd, "--no-auth",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "bench",
+                "--stdio",
+                cmd,
+                "--no-auth",
+            ],
+        )
         assert result.exit_code == 3
 
     def test_audit_pkce_flags_require_http(self) -> None:
         cmd = f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"
-        result = runner.invoke(app, [
-            "audit", "--stdio", cmd, "--no-browser",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "audit",
+                "--stdio",
+                cmd,
+                "--no-browser",
+            ],
+        )
         assert result.exit_code == 3
 
     def test_watch_pkce_flags_require_http(self) -> None:
         cmd = f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"
-        result = runner.invoke(app, [
-            "watch", "--stdio", cmd, "--clear-tokens",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "watch",
+                "--stdio",
+                cmd,
+                "--clear-tokens",
+            ],
+        )
         assert result.exit_code == 3
 
     def test_pin_pkce_flags_require_http(self) -> None:
         cmd = f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"
-        result = runner.invoke(app, [
-            "pin", "--stdio", cmd, "--callback-port", "3035",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "pin",
+                "--stdio",
+                cmd,
+                "--callback-port",
+                "3035",
+            ],
+        )
         assert result.exit_code == 3
 
 
@@ -347,8 +400,13 @@ class TestMaybeSetupPKCE:
         from halflist.cli import _maybe_setup_pkce
 
         auth, server = _maybe_setup_pkce(
-            None, None, no_auth=False, no_browser=False,
-            clear_tokens=False, callback_port=None, oauth_scope=None,
+            None,
+            None,
+            no_auth=False,
+            no_browser=False,
+            clear_tokens=False,
+            callback_port=None,
+            oauth_scope=None,
         )
         assert auth is None
         assert server is None
@@ -357,8 +415,13 @@ class TestMaybeSetupPKCE:
         from halflist.cli import _maybe_setup_pkce
 
         auth, server = _maybe_setup_pkce(
-            "http://example.com/mcp", None, no_auth=True, no_browser=False,
-            clear_tokens=False, callback_port=None, oauth_scope=None,
+            "http://example.com/mcp",
+            None,
+            no_auth=True,
+            no_browser=False,
+            clear_tokens=False,
+            callback_port=None,
+            oauth_scope=None,
         )
         assert auth is None
         assert server is None
@@ -369,8 +432,11 @@ class TestMaybeSetupPKCE:
         auth, server = _maybe_setup_pkce(
             "http://example.com/mcp",
             {"Authorization": "Bearer tok123"},
-            no_auth=False, no_browser=False,
-            clear_tokens=False, callback_port=None, oauth_scope=None,
+            no_auth=False,
+            no_browser=False,
+            clear_tokens=False,
+            callback_port=None,
+            oauth_scope=None,
         )
         assert auth is None
         assert server is None
@@ -379,9 +445,13 @@ class TestMaybeSetupPKCE:
         from halflist.cli import _maybe_setup_pkce
 
         auth, server = _maybe_setup_pkce(
-            "http://example.com/mcp", None,
-            no_auth=False, no_browser=False,
-            clear_tokens=False, callback_port=None, oauth_scope=None,
+            "http://example.com/mcp",
+            None,
+            no_auth=False,
+            no_browser=False,
+            clear_tokens=False,
+            callback_port=None,
+            oauth_scope=None,
         )
         try:
             assert auth is not None
@@ -397,8 +467,11 @@ class TestMaybeSetupPKCE:
         auth, server = _maybe_setup_pkce(
             "http://example.com/mcp",
             {"X-Custom": "value"},
-            no_auth=False, no_browser=False,
-            clear_tokens=False, callback_port=None, oauth_scope=None,
+            no_auth=False,
+            no_browser=False,
+            clear_tokens=False,
+            callback_port=None,
+            oauth_scope=None,
         )
         try:
             assert auth is not None

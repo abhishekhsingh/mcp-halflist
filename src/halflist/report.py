@@ -191,7 +191,9 @@ class LiveProgress:
         spinner = _SPINNER_FRAMES[self._frame % len(_SPINNER_FRAMES)]
         total_done = sum(len(v) for v in self.checks.values())
         elapsed_total = time.monotonic() - self._start
-        header = Text(f"  {spinner} Running checks... {total_done} completed · {elapsed_total:.1f}s\n")
+        header = Text(
+            f"  {spinner} Running checks... {total_done} completed · {elapsed_total:.1f}s\n"
+        )
         lines: list[Text] = [header]
 
         for name in self.suite_names:
@@ -225,7 +227,11 @@ class LiveProgress:
 
 
 def render_final_report(
-    console: Console, report: HalflistReport, verbose: bool, *, is_filtered: bool = False,
+    console: Console,
+    report: HalflistReport,
+    verbose: bool,
+    *,
+    is_filtered: bool = False,
 ) -> None:
     server_line = "unknown"
     if report.server_info:
@@ -275,26 +281,42 @@ def render_final_report(
 
     if is_filtered:
         if report.total_failed > 0:
-            console.print(Panel(
-                "  [bold red]✗  FAIL[/bold red]",
-                border_style="red", expand=False, padding=(0, 1),
-            ))
+            console.print(
+                Panel(
+                    "  [bold red]✗  FAIL[/bold red]",
+                    border_style="red",
+                    expand=False,
+                    padding=(0, 1),
+                )
+            )
         else:
-            console.print(Panel(
-                "  [bold green]✓  PASS[/bold green]",
-                border_style="green", expand=False, padding=(0, 1),
-            ))
+            console.print(
+                Panel(
+                    "  [bold green]✓  PASS[/bold green]",
+                    border_style="green",
+                    expand=False,
+                    padding=(0, 1),
+                )
+            )
     else:
         if report.total_failed > 0:
-            console.print(Panel(
-                f"  [bold red]✗  FAIL[/bold red]   Score: {report.score}/100",
-                border_style="red", expand=False, padding=(0, 1),
-            ))
+            console.print(
+                Panel(
+                    f"  [bold red]✗  FAIL[/bold red]   Score: {report.score}/100",
+                    border_style="red",
+                    expand=False,
+                    padding=(0, 1),
+                )
+            )
         else:
-            console.print(Panel(
-                f"  [bold green]✓  PASS[/bold green]   Score: {report.score}/100",
-                border_style="green", expand=False, padding=(0, 1),
-            ))
+            console.print(
+                Panel(
+                    f"  [bold green]✓  PASS[/bold green]   Score: {report.score}/100",
+                    border_style="green",
+                    expand=False,
+                    padding=(0, 1),
+                )
+            )
     console.print()
 
 
@@ -415,10 +437,14 @@ class BenchLiveProgress:
     def render(self) -> Group:
         self._frame += 1
         spinner = _SPINNER_FRAMES[self._frame % len(_SPINNER_FRAMES)]
-        done_tools = sum(1 for n in self.tool_names if self.p50s[n] is not None or n in self.skipped)
+        done_tools = sum(
+            1 for n in self.tool_names if self.p50s[n] is not None or n in self.skipped
+        )
         total_tools = len(self.tool_names)
         elapsed_total = time.monotonic() - self._start
-        header = Text(f"  {spinner} Benchmarking {done_tools}/{total_tools} tools · {elapsed_total:.1f}s\n")
+        header = Text(
+            f"  {spinner} Benchmarking {done_tools}/{total_tools} tools · {elapsed_total:.1f}s\n"
+        )
         lines: list[Text] = [header]
 
         for name in self.tool_names:
@@ -496,13 +522,22 @@ def render_bench_report(console: Console, report: BenchReport) -> None:
             skipped_count += 1
             table.add_row(
                 f"[dim]{bm.tool_name}[/dim]",
-                "[dim]skipped (args rejected)[/dim]", "", "", "", "",
+                "[dim]skipped (args rejected)[/dim]",
+                "",
+                "",
+                "",
+                "",
                 "[dim]● skip[/dim]",
             )
         elif bm.errors == bm.iterations:
             benchmarked_count += 1
             table.add_row(
-                bm.tool_name, "[red]all failed[/red]", "", "", "", "",
+                bm.tool_name,
+                "[red]all failed[/red]",
+                "",
+                "",
+                "",
+                "",
                 "[dim red]● error[/dim red]",
             )
         else:
@@ -607,13 +642,22 @@ def render_audit_report(console: Console, report: AuditReport, verbose: bool) ->
                 audit_skipped += 1
                 table.add_row(
                     f"[dim]{bm.tool_name}[/dim]",
-                    "[dim]skipped (args rejected)[/dim]", "", "", "", "",
+                    "[dim]skipped (args rejected)[/dim]",
+                    "",
+                    "",
+                    "",
+                    "",
                     "[dim]● skip[/dim]",
                 )
             elif bm.errors == bm.iterations:
                 audit_benched += 1
                 table.add_row(
-                    bm.tool_name, "[red]all failed[/red]", "", "", "", "",
+                    bm.tool_name,
+                    "[red]all failed[/red]",
+                    "",
+                    "",
+                    "",
+                    "",
                     "[dim red]● error[/dim red]",
                 )
             else:
@@ -645,15 +689,23 @@ def render_audit_report(console: Console, report: AuditReport, verbose: bool) ->
     console.print(f"  Connection: {conn:.0f}ms · Discovery: {disc:.0f}ms · Total: {total:.1f}s")
 
     if report.total_failed > 0:
-        console.print(Panel(
-            f"  [bold red]✗  FAIL[/bold red]   Score: {score}/100",
-            border_style="red", expand=False, padding=(0, 1),
-        ))
+        console.print(
+            Panel(
+                f"  [bold red]✗  FAIL[/bold red]   Score: {score}/100",
+                border_style="red",
+                expand=False,
+                padding=(0, 1),
+            )
+        )
     else:
-        console.print(Panel(
-            f"  [bold green]✓  PASS[/bold green]   Score: {score}/100",
-            border_style="green", expand=False, padding=(0, 1),
-        ))
+        console.print(
+            Panel(
+                f"  [bold green]✓  PASS[/bold green]   Score: {score}/100",
+                border_style="green",
+                expand=False,
+                padding=(0, 1),
+            )
+        )
     console.print()
 
 
@@ -699,7 +751,9 @@ def render_check_markdown(data: dict[str, Any]) -> str:
     total_w = data.get("total_warned", 0)
     total_d = data.get("total_duration_ms", 0) / 1000
     lines.append("")
-    lines.append(f"**Total:** {total_p} passed · {total_f} failed · {total_w} warning · {total_d:.1f}s")
+    lines.append(
+        f"**Total:** {total_p} passed · {total_f} failed · {total_w} warning · {total_d:.1f}s"
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -744,7 +798,9 @@ def render_bench_markdown(data: dict[str, Any]) -> str:
     disc = data.get("discovery_ms", 0)
     total = data.get("total_duration_ms", 0) / 1000
     lines.append("")
-    lines.append(f"**Connection:** {conn:.0f}ms · **Discovery:** {disc:.0f}ms · **Total:** {total:.1f}s")
+    lines.append(
+        f"**Connection:** {conn:.0f}ms · **Discovery:** {disc:.0f}ms · **Total:** {total:.1f}s"
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -808,12 +864,16 @@ def render_audit_markdown(data: dict[str, Any]) -> str:
     disc = data.get("discovery_ms", 0)
     total = data.get("total_duration_ms", 0) / 1000
     lines.append("")
-    lines.append(f"**Connection:** {conn:.0f}ms · **Discovery:** {disc:.0f}ms · **Total:** {total:.1f}s")
+    lines.append(
+        f"**Connection:** {conn:.0f}ms · **Discovery:** {disc:.0f}ms · **Total:** {total:.1f}s"
+    )
     return "\n".join(lines) + "\n"
 
 
 def _html_escape(text: str) -> str:
-    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    return (
+        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    )
 
 
 _HTML_TEMPLATE = """\
@@ -976,8 +1036,7 @@ def _render_suites_html(suites: list[dict[str, Any]]) -> str:
 
         rule_fill = "━" * max(2, 40 - len(name_upper))
         summary_line = (
-            f'<span class="{rule_cls}">━━ {name_upper} {rule_fill}'
-            f' {passed}/{total} {suffix}</span>'
+            f'<span class="{rule_cls}">━━ {name_upper} {rule_fill} {passed}/{total} {suffix}</span>'
         )
 
         checks_html = ""
@@ -986,7 +1045,8 @@ def _render_suites_html(suites: list[dict[str, Any]]) -> str:
             cname = _html_escape(c["name"])
             if is_security:
                 label, label_cls = _HTML_SECURITY_LABELS.get(
-                    c["status"], (c["status"], "skip"),
+                    c["status"],
+                    (c["status"], "skip"),
                 )
                 msg_html = f'<span class="check-msg {label_cls}">{label}</span>'
             else:
@@ -996,11 +1056,11 @@ def _render_suites_html(suites: list[dict[str, Any]]) -> str:
                 f'<div class="check-row">{icon}'
                 f'<span class="check-name">{cname}</span>'
                 f'<span class="dot-leader"></span>'
-                f'{msg_html}</div>\n'
+                f"{msg_html}</div>\n"
             )
 
         parts.append(
-            f'<details><summary>{summary_line}</summary>\n'
+            f"<details><summary>{summary_line}</summary>\n"
             f'<div class="check-list">{checks_html}</div></details>\n'
         )
     return "".join(parts)
@@ -1047,7 +1107,8 @@ def _render_bench_table_html(benchmarks: list[dict[str, Any]]) -> str:
     return (
         "<table><thead><tr><th>Tool</th><th>p50</th><th>p95</th><th>p99</th>"
         "<th>min</th><th>max</th><th>p99 bar</th></tr></thead><tbody>\n"
-        + rows + "</tbody></table>\n"
+        + rows
+        + "</tbody></table>\n"
     )
 
 
@@ -1070,11 +1131,11 @@ def render_check_html(data: dict[str, Any]) -> str:
     body += f'<div class="meta-item"><span class="meta-label">Passed:</span> <span class="meta-value pass">{data.get("total_passed", 0)}</span></div>'
     body += f'<div class="meta-item"><span class="meta-label">Failed:</span> <span class="meta-value fail">{data.get("total_failed", 0)}</span></div>'
     body += f'<div class="meta-item"><span class="meta-label">Warnings:</span> <span class="meta-value warn">{data.get("total_warned", 0)}</span></div>'
-    body += '</div></div>\n'
+    body += "</div></div>\n"
 
     body += '<div class="card"><h2>Suites</h2>\n'
     body += _render_suites_html(data.get("suites", []))
-    body += '</div>\n'
+    body += "</div>\n"
 
     return _HTML_TEMPLATE.format(
         title=f"{name} - Conformance",
@@ -1098,11 +1159,11 @@ def render_bench_html(data: dict[str, Any]) -> str:
     body += f'<div class="meta-item"><span class="meta-label">Iterations:</span> <span class="meta-value">{data.get("iterations", 0)}</span></div>'
     body += f'<div class="meta-item"><span class="meta-label">Connection:</span> <span class="meta-value">{data.get("connection_ms", 0):.0f}ms</span></div>'
     body += f'<div class="meta-item"><span class="meta-label">Total:</span> <span class="meta-value">{total_dur:.1f}s</span></div>'
-    body += '</div></div>\n'
+    body += "</div></div>\n"
 
     body += '<div class="card"><h2>Latency per Tool</h2>\n'
     body += _render_bench_table_html(data.get("benchmarks", []))
-    body += '</div>\n'
+    body += "</div>\n"
 
     return _HTML_TEMPLATE.format(
         title=f"{name} - Benchmark",
@@ -1134,25 +1195,25 @@ def render_audit_html(data: dict[str, Any]) -> str:
     body += f'<div class="meta-item"><span class="meta-label">Warnings:</span> <span class="meta-value warn">{data.get("total_warned", 0)}</span></div>'
     body += f'<div class="meta-item"><span class="meta-label">Tools:</span> <span class="meta-value">{data.get("benchmarked_count", 0)} of {data.get("tool_count", 0)}</span></div>'
     body += f'<div class="meta-item"><span class="meta-label">Iterations:</span> <span class="meta-value">{data.get("iterations", 0)}</span></div>'
-    body += '</div></div>\n'
+    body += "</div></div>\n"
 
     body += '<div class="card" id="conformance"><h2>Conformance</h2>\n'
     body += _render_suites_html(data.get("suites", []))
-    body += '</div>\n'
+    body += "</div>\n"
 
     has_bench = bool(data.get("benchmarks"))
     if has_bench:
         body += '<div class="card" id="latency"><h2>Latency per Tool</h2>\n'
         body += _render_bench_table_html(data.get("benchmarks", []))
-        body += '</div>\n'
+        body += "</div>\n"
 
     nav_css = (
-        '.topnav{position:fixed;top:0;left:0;right:0;background:var(--bg);border-bottom:1px solid var(--border);'
-        'padding:.5rem 1rem;z-index:1000;display:flex;align-items:center;gap:1.5rem;font-family:var(--font-mono);font-size:.8rem}'
-        '.topnav .nav-brand{color:var(--green);font-weight:700}'
-        '.topnav a{color:var(--green-dim);text-decoration:none;text-transform:uppercase;letter-spacing:.05em}'
-        '.topnav a:hover{color:var(--green)}'
-        'body{padding-top:3.5rem}'
+        ".topnav{position:fixed;top:0;left:0;right:0;background:var(--bg);border-bottom:1px solid var(--border);"
+        "padding:.5rem 1rem;z-index:1000;display:flex;align-items:center;gap:1.5rem;font-family:var(--font-mono);font-size:.8rem}"
+        ".topnav .nav-brand{color:var(--green);font-weight:700}"
+        ".topnav a{color:var(--green-dim);text-decoration:none;text-transform:uppercase;letter-spacing:.05em}"
+        ".topnav a:hover{color:var(--green)}"
+        "body{padding-top:3.5rem}"
     )
     nav_links = '<a href="#conformance">Conformance</a>'
     if has_bench:

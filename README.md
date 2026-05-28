@@ -4,6 +4,7 @@ CI-first conformance, security, and benchmarking CLI for MCP servers.
 
 **Lint your MCP server before your users do.**
 
+[![CI](https://github.com/abhishekhsingh/mcp-halflist/actions/workflows/ci.yml/badge.svg)](https://github.com/abhishekhsingh/mcp-halflist/actions/workflows/ci.yml)
 ![PyPI](https://img.shields.io/pypi/v/mcp-halflist)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Python](https://img.shields.io/pypi/pyversions/mcp-halflist)
@@ -128,6 +129,17 @@ See the [output format reference](https://github.com/abhishekhsingh/mcp-halflist
 | [mcp-server-tester](https://github.com/apify/mcp-server-tester) | LLM-generated tests | Yes (Anthropic) | Yes |
 | [mcp-scan](https://github.com/invariantlabs-ai/mcp-scan) | Security scanning | Yes (OpenAI for local) | Yes (Invariant API) |
 | **mcp-halflist** | **CI-first check + security + bench** | **No** | **No** |
+
+## Development
+
+```bash
+git clone https://github.com/abhishekhsingh/mcp-halflist.git
+cd mcp-halflist
+pip install -e ".[dev]"
+ruff check src/ tests/
+ruff format --check src/ tests/
+pytest -v --tb=short
+```
 
 ## License
 

@@ -116,13 +116,12 @@ class HalflistClient:
             read_stream, write_stream, _ = await exit_stack.enter_async_context(
                 streamable_http_client(**ctx_args)
             )
-            session = await exit_stack.enter_async_context(
-                ClientSession(read_stream, write_stream)
-            )
+            session = await exit_stack.enter_async_context(ClientSession(read_stream, write_stream))
 
             timeout = init_timeout if init_timeout is not None else self._timeout
             result = await asyncio.wait_for(
-                session.initialize(), timeout=timeout,
+                session.initialize(),
+                timeout=timeout,
             )
 
             self._exit_stack = exit_stack
@@ -153,16 +152,13 @@ class HalflistClient:
             if auth:
                 ctx_args["auth"] = auth
 
-            read_stream, write_stream = await exit_stack.enter_async_context(
-                sse_client(**ctx_args)
-            )
-            session = await exit_stack.enter_async_context(
-                ClientSession(read_stream, write_stream)
-            )
+            read_stream, write_stream = await exit_stack.enter_async_context(sse_client(**ctx_args))
+            session = await exit_stack.enter_async_context(ClientSession(read_stream, write_stream))
 
             timeout = init_timeout if init_timeout is not None else self._timeout
             result = await asyncio.wait_for(
-                session.initialize(), timeout=timeout,
+                session.initialize(),
+                timeout=timeout,
             )
 
             self._exit_stack = exit_stack
@@ -237,7 +233,9 @@ class HalflistClient:
         return result.prompts
 
     async def get_prompt(
-        self, name: str, arguments: dict[str, str] | None = None,
+        self,
+        name: str,
+        arguments: dict[str, str] | None = None,
     ) -> types.GetPromptResult:
         with MCPDebugLogger("prompts/get", f"{name} {_format_args(arguments)}") as dbg:
             start = time.monotonic()
@@ -246,7 +244,9 @@ class HalflistClient:
             dbg.success(f"ok ({len(result.messages)} messages)")
         return result
 
-    async def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> types.CallToolResult:
+    async def call_tool(
+        self, name: str, arguments: dict[str, Any] | None = None
+    ) -> types.CallToolResult:
         with MCPDebugLogger("tools/call", f"{name} {_format_args(arguments)}") as dbg:
             start = time.monotonic()
             result = await self.session.call_tool(name, arguments)

@@ -128,7 +128,8 @@ class FileTokenStorage:
             self._dir.chmod(0o700)
         except OSError:
             logging.getLogger("halflist").warning(
-                "Cannot create token directory %s; tokens will not be cached", self._dir,
+                "Cannot create token directory %s; tokens will not be cached",
+                self._dir,
             )
             self._dir = None
         self._path: Path | None = self._dir / f"{url_hash}.json" if self._dir else None

@@ -52,7 +52,11 @@ async def test_bench_timeout_counts_as_error() -> None:
     tool = _make_tool()
 
     result = await bench_tool(
-        client, tool, iterations=2, warmup=0, call_timeout=0.1,
+        client,
+        tool,
+        iterations=2,
+        warmup=0,
+        call_timeout=0.1,
     )
 
     assert result.errors == 2
@@ -73,7 +77,11 @@ async def test_bench_timeout_warmup_failure() -> None:
     tool = _make_tool()
 
     result = await bench_tool(
-        client, tool, iterations=5, warmup=2, call_timeout=0.1,
+        client,
+        tool,
+        iterations=5,
+        warmup=2,
+        call_timeout=0.1,
     )
 
     assert result.skipped is True
@@ -88,7 +96,11 @@ async def test_bench_no_timeout_works_normally() -> None:
     tool = _make_tool()
 
     result = await bench_tool(
-        client, tool, iterations=3, warmup=0, call_timeout=None,
+        client,
+        tool,
+        iterations=3,
+        warmup=0,
+        call_timeout=None,
     )
 
     assert result.errors == 0
@@ -108,7 +120,11 @@ async def test_bench_custom_args_used() -> None:
 
     custom = {"q": "my custom query"}
     result = await bench_tool(
-        client, tool, iterations=2, warmup=0, custom_args=custom,
+        client,
+        tool,
+        iterations=2,
+        warmup=0,
+        custom_args=custom,
     )
 
     assert result.errors == 0
@@ -124,7 +140,11 @@ async def test_bench_no_custom_args_uses_generated() -> None:
     tool = _make_tool()
 
     result = await bench_tool(
-        client, tool, iterations=2, warmup=0, custom_args=None,
+        client,
+        tool,
+        iterations=2,
+        warmup=0,
+        custom_args=None,
     )
 
     assert result.errors == 0
@@ -181,9 +201,19 @@ def test_bench_args_file_integration(tmp_path: Path) -> None:
     result = runner.invoke(
         app,
         [
-            "bench", "--stdio", _good_cmd(), "--format", "json",
-            "-n", "2", "-w", "0", "--tool", "greet",
-            "--args-file", str(f),
+            "bench",
+            "--stdio",
+            _good_cmd(),
+            "--format",
+            "json",
+            "-n",
+            "2",
+            "-w",
+            "0",
+            "--tool",
+            "greet",
+            "--args-file",
+            str(f),
         ],
     )
     assert result.exit_code == 0, result.output
@@ -198,8 +228,13 @@ def test_check_args_file_integration(tmp_path: Path) -> None:
     result = runner.invoke(
         app,
         [
-            "check", "--stdio", _good_cmd(), "--format", "json",
-            "--args-file", str(f),
+            "check",
+            "--stdio",
+            _good_cmd(),
+            "--format",
+            "json",
+            "--args-file",
+            str(f),
         ],
     )
     assert result.exit_code == 0, result.output
@@ -213,9 +248,17 @@ def test_audit_args_file_integration(tmp_path: Path) -> None:
     result = runner.invoke(
         app,
         [
-            "audit", "--stdio", _good_cmd(), "--format", "json",
-            "-n", "2", "-w", "0",
-            "--args-file", str(f),
+            "audit",
+            "--stdio",
+            _good_cmd(),
+            "--format",
+            "json",
+            "-n",
+            "2",
+            "-w",
+            "0",
+            "--args-file",
+            str(f),
         ],
     )
     assert result.exit_code == 0, result.output
@@ -239,9 +282,19 @@ def test_bench_timeout_with_slow_server() -> None:
     result = runner.invoke(
         app,
         [
-            "bench", "--stdio", _slow_cmd(), "--format", "json",
-            "-n", "2", "-w", "1",
-            "--tool", "slow_tool", "--timeout", "2",
+            "bench",
+            "--stdio",
+            _slow_cmd(),
+            "--format",
+            "json",
+            "-n",
+            "2",
+            "-w",
+            "1",
+            "--tool",
+            "slow_tool",
+            "--timeout",
+            "2",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -257,9 +310,19 @@ def test_bench_fast_tool_on_slow_server() -> None:
     result = runner.invoke(
         app,
         [
-            "bench", "--stdio", _slow_cmd(), "--format", "json",
-            "-n", "2", "-w", "1",
-            "--tool", "fast_tool", "--timeout", "5",
+            "bench",
+            "--stdio",
+            _slow_cmd(),
+            "--format",
+            "json",
+            "-n",
+            "2",
+            "-w",
+            "1",
+            "--tool",
+            "fast_tool",
+            "--timeout",
+            "5",
         ],
     )
     assert result.exit_code == 0, result.output

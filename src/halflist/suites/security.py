@@ -17,7 +17,10 @@ from halflist.suites.base import CheckSuite
 
 _INJECTION_FAIL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"</?IMPORTANT>", re.IGNORECASE), "<IMPORTANT> tags"),
-    (re.compile(r"IGNORE\s+(ALL\s+)?PREVIOUS\s+INSTRUCTIONS", re.IGNORECASE), "IGNORE PREVIOUS INSTRUCTIONS"),
+    (
+        re.compile(r"IGNORE\s+(ALL\s+)?PREVIOUS\s+INSTRUCTIONS", re.IGNORECASE),
+        "IGNORE PREVIOUS INSTRUCTIONS",
+    ),
     (re.compile(r"^system:", re.IGNORECASE | re.MULTILINE), "system: directive"),
     (re.compile(r"^\[SYSTEM\]", re.IGNORECASE | re.MULTILINE), "[SYSTEM] directive"),
     (
@@ -100,21 +103,29 @@ _CROSS_TOOL_SPECIFIC_TEMPLATES: list[str] = [
 ]
 
 _CROSS_TOOL_GENERIC_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"use\s+this\s+tool\s+instead\s+of", re.IGNORECASE), "instructs to use instead of other tools"),
-    (re.compile(r"always\s+call\s+this\s+(before|first)", re.IGNORECASE), "instructs to always call first"),
+    (
+        re.compile(r"use\s+this\s+tool\s+instead\s+of", re.IGNORECASE),
+        "instructs to use instead of other tools",
+    ),
+    (
+        re.compile(r"always\s+call\s+this\s+(before|first)", re.IGNORECASE),
+        "instructs to always call first",
+    ),
 ]
 
 # ── Check 4: Suspicious encoding ─────────────────────────────────────────────
 
 _BASE64_PATTERN: re.Pattern[str] = re.compile(r"[A-Za-z0-9+/]{20,}={0,2}")
 
-_ZERO_WIDTH_CHARS: str = "".join([
-    chr(0x200B),
-    chr(0x200C),
-    chr(0x200D),
-    chr(0xFEFF),
-    chr(0x00AD),
-])
+_ZERO_WIDTH_CHARS: str = "".join(
+    [
+        chr(0x200B),
+        chr(0x200C),
+        chr(0x200D),
+        chr(0xFEFF),
+        chr(0x00AD),
+    ]
+)
 _ZERO_WIDTH_PATTERN: re.Pattern[str] = re.compile(f"[{_ZERO_WIDTH_CHARS}]")
 
 _INSTRUCTION_WORDS: re.Pattern[str] = re.compile(
@@ -122,9 +133,7 @@ _INSTRUCTION_WORDS: re.Pattern[str] = re.compile(
     re.IGNORECASE,
 )
 
-_HTML_ENTITY_PATTERN: re.Pattern[str] = re.compile(
-    r"&lt;|&gt;|&#x[0-9a-fA-F]+;?|&#[0-9]+;?"
-)
+_HTML_ENTITY_PATTERN: re.Pattern[str] = re.compile(r"&lt;|&gt;|&#x[0-9a-fA-F]+;?|&#[0-9]+;?")
 
 
 def _get_description(tool: types.Tool) -> str | None:
@@ -225,7 +234,9 @@ class SecuritySuite(CheckSuite):
             for pattern, label in _EXFIL_FAIL_PATH_PATTERNS:
                 m = pattern.search(desc)
                 if m:
-                    failures.append(f"{tool.name}: references sensitive path {label} - matched '{m.group()}'")
+                    failures.append(
+                        f"{tool.name}: references sensitive path {label} - matched '{m.group()}'"
+                    )
 
             for pattern, label in _EXFIL_FAIL_IMPERATIVE_PATTERNS:
                 m = pattern.search(desc)
@@ -238,17 +249,14 @@ class SecuritySuite(CheckSuite):
                 url_end = desc.find(" ", m.start())
                 if url_end == -1:
                     url_end = min(m.start() + 60, len(desc))
-                url_snippet = desc[m.start():url_end].strip()[:60]
+                url_snippet = desc[m.start() : url_end].strip()[:60]
                 warnings.append(f"{tool.name}: contains http:// URL - '{url_snippet}'")
 
             m = _EXFIL_WARN_SENSITIVE_KEYWORDS.search(desc)
             if m:
-                has_imperative = any(
-                    p.search(desc) for p, _ in _EXFIL_FAIL_IMPERATIVE_PATTERNS
-                )
+                has_imperative = any(p.search(desc) for p, _ in _EXFIL_FAIL_IMPERATIVE_PATTERNS)
                 if not has_imperative:
                     warnings.append(f"{tool.name}: mentions sensitive keyword '{m.group()}'")
-
 
         if failures:
             self.record(
@@ -328,13 +336,13 @@ class SecuritySuite(CheckSuite):
 
             zw_matches = _ZERO_WIDTH_PATTERN.findall(desc)
             if zw_matches:
-                failures.append(
-                    f"{tool.name}: contains {len(zw_matches)} zero-width character(s)"
-                )
+                failures.append(f"{tool.name}: contains {len(zw_matches)} zero-width character(s)")
 
             if _HTML_ENTITY_PATTERN.search(desc):
                 entity_count = len(_HTML_ENTITY_PATTERN.findall(desc))
-                warnings.append(f"{tool.name}: contains {entity_count} HTML entit{'y' if entity_count == 1 else 'ies'}")
+                warnings.append(
+                    f"{tool.name}: contains {entity_count} HTML entit{'y' if entity_count == 1 else 'ies'}"
+                )
 
         if failures:
             self.record(

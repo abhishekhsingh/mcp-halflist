@@ -206,8 +206,20 @@ def test_check_html_with_checks() -> None:
             {
                 "name": "handshake",
                 "checks": [
-                    {"name": "init response", "status": "PASS", "message": None, "duration_ms": 10.0, "suite": "handshake"},
-                    {"name": "ping returns pong", "status": "FAIL", "message": "timeout", "duration_ms": 5.0, "suite": "handshake"},
+                    {
+                        "name": "init response",
+                        "status": "PASS",
+                        "message": None,
+                        "duration_ms": 10.0,
+                        "suite": "handshake",
+                    },
+                    {
+                        "name": "ping returns pong",
+                        "status": "FAIL",
+                        "message": "timeout",
+                        "duration_ms": 5.0,
+                        "suite": "handshake",
+                    },
                 ],
                 "passed": 1,
                 "failed": 1,

@@ -48,7 +48,9 @@ def test_cli_check_good_server_terminal() -> None:
 
 def test_cli_check_suite_filter() -> None:
     cmd = f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"
-    result = runner.invoke(app, ["check", "--stdio", cmd, "--suite", "handshake", "--format", "json"])
+    result = runner.invoke(
+        app, ["check", "--stdio", cmd, "--suite", "handshake", "--format", "json"]
+    )
     assert result.exit_code == 0
 
     report = json.loads(result.output)
@@ -103,7 +105,14 @@ def test_cli_auth_flags_require_http() -> None:
 
 def test_cli_incomplete_oauth() -> None:
     result = runner.invoke(
-        app, ["check", "--http", "http://localhost:8080", "--oauth-token-url", "https://auth.example.com/token"]
+        app,
+        [
+            "check",
+            "--http",
+            "http://localhost:8080",
+            "--oauth-token-url",
+            "https://auth.example.com/token",
+        ],
     )
     assert result.exit_code == 3
     assert "OAuth requires all of" in result.output

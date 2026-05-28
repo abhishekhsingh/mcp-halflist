@@ -138,7 +138,9 @@ class ToolsSuite(CheckSuite):
                 if all_typed:
                     self.record("Each content item has a type field", "PASS")
                 else:
-                    self.record("Each content item has a type field", "FAIL", "Missing type on some items")
+                    self.record(
+                        "Each content item has a type field", "FAIL", "Missing type on some items"
+                    )
             else:
                 self.record("Response content is a list", "FAIL", f"Got {type(content).__name__}")
                 self.record("Each content item has a type field", "SKIP", "Content not a list")

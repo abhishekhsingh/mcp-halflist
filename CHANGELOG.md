@@ -24,6 +24,10 @@
   - `HALFLIST_LOG_LEVEL` env var for CI environments
   - Available on all 6 commands
 
+### CI/CD
+- CI: GitHub Actions workflow with Python 3.10/3.11/3.12 matrix, ruff lint + format check, pytest
+- Publish: PyPI trusted publishing via GitHub Releases (no API token needed)
+
 ### Improvements
 - Security check messages now include thresholds, matched text snippets, and actionable context
 - Security findings expanded with `→` prefix in terminal output (each finding on its own line for FAIL/WARN checks)

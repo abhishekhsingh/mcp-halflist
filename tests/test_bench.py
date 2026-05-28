@@ -17,7 +17,9 @@ def _good_cmd() -> str:
 
 
 def test_bench_default_json() -> None:
-    result = runner.invoke(app, ["bench", "--stdio", _good_cmd(), "--format", "json", "-n", "3", "-w", "0"])
+    result = runner.invoke(
+        app, ["bench", "--stdio", _good_cmd(), "--format", "json", "-n", "3", "-w", "0"]
+    )
     assert result.exit_code == 0, result.output
 
     report = json.loads(result.output)
@@ -33,7 +35,19 @@ def test_bench_default_json() -> None:
 def test_bench_tool_filter() -> None:
     result = runner.invoke(
         app,
-        ["bench", "--stdio", _good_cmd(), "--format", "json", "-n", "2", "-w", "0", "--tool", "greet"],
+        [
+            "bench",
+            "--stdio",
+            _good_cmd(),
+            "--format",
+            "json",
+            "-n",
+            "2",
+            "-w",
+            "0",
+            "--tool",
+            "greet",
+        ],
     )
     assert result.exit_code == 0, result.output
 
@@ -66,7 +80,19 @@ def test_bench_terminal() -> None:
 def test_bench_percentile_sanity() -> None:
     result = runner.invoke(
         app,
-        ["bench", "--stdio", _good_cmd(), "--format", "json", "-n", "5", "-w", "0", "--tool", "add"],
+        [
+            "bench",
+            "--stdio",
+            _good_cmd(),
+            "--format",
+            "json",
+            "-n",
+            "5",
+            "-w",
+            "0",
+            "--tool",
+            "add",
+        ],
     )
     assert result.exit_code == 0, result.output
 

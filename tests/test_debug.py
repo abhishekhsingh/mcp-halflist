@@ -178,6 +178,7 @@ def test_debug_logger_with_params(caplog: pytest.LogCaptureFixture) -> None:
 
 def test_debug_logger_elapsed_time(caplog: pytest.LogCaptureFixture) -> None:
     import time
+
     setup_debug_logging(debug=True)
     with caplog.at_level(logging.DEBUG, logger="halflist"):
         with MCPDebugLogger("ping") as dbg:

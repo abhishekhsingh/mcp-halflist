@@ -100,7 +100,9 @@ class MCPDebugLogger:
     ) -> bool:
         if exc_type:
             elapsed = (time.perf_counter() - self.start) * 1000
-            label = "TIMEOUT" if issubclass(exc_type, (TimeoutError,)) else f"ERROR {exc_type.__name__}"
+            label = (
+                "TIMEOUT" if issubclass(exc_type, (TimeoutError,)) else f"ERROR {exc_type.__name__}"
+            )
             logger.debug(f"← {self.method}: {label} ({elapsed:.0f}ms)")
         return False
 
@@ -126,9 +128,7 @@ async def _log_request(request: httpx.Request) -> None:
 async def _log_response(response: httpx.Response) -> None:
     request = response.request
     size = len(response.content) if hasattr(response, "_content") else "?"
-    logger.debug(
-        f"HTTP ← {response.status_code} ({size}B) [{request.method} {request.url}]"
-    )
+    logger.debug(f"HTTP ← {response.status_code} ({size}B) [{request.method} {request.url}]")
 
 
 def create_debug_event_hooks() -> dict[str, list]:
