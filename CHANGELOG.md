@@ -23,6 +23,11 @@
   - `--debug-log <file>` to write debug output to a file
   - `HALFLIST_LOG_LEVEL` env var for CI environments
   - Available on all 6 commands
+- **JUnit XML output** (`--format junit`): CI-native test reporting for GitHub Actions, GitLab, Jenkins
+  - Available on `check`, `bench`, `audit` commands and `report` post-processing
+  - WARN checks mapped to `<failure type="WARN">` for CI visibility
+  - Bench results include p50/p95/p99 as `<property>` elements
+  - `[output] format = "junit"` and `[report] format = "junit"` in halflist.toml
 - **halflist.toml config file**: optional TOML config to replace repeated CLI flags
   - Auto-discovered from cwd (`halflist.toml`, `.halflist.toml`) or `~/.halflist/config.toml`
   - Explicit path via `--config` flag on all 6 commands

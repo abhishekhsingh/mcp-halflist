@@ -82,6 +82,16 @@ halflist check --stdio "npx -y @modelcontextprotocol/server-time"
 halflist check --stdio "npx -y @modelcontextprotocol/server-filesystem /tmp"
 ```
 
+## CI Integration
+
+JUnit XML output works with GitHub Actions, GitLab CI, Jenkins, and any CI system that supports JUnit test reporters:
+
+```bash
+# Generate JUnit XML for CI test reporters
+halflist check --stdio "python3 server.py" --format junit -o results.xml
+halflist audit --stdio "python3 server.py" --format junit -o audit.xml
+```
+
 ## Commands
 
 | Command | What it does |
@@ -149,7 +159,7 @@ Config file discovery order: `halflist.toml` (cwd) > `.halflist.toml` (cwd) > `~
 
 ## Output Formats
 
-Terminal (colored, default) · JSON (`--format json`) · Markdown · HTML · SVG Badge
+Terminal (colored, default) · JSON (`--format json`) · JUnit XML (`--format junit`) · Markdown · HTML · SVG Badge
 
 See the [output format reference](https://github.com/abhishekhsingh/mcp-halflist/blob/main/docs/output-formats.md) for details.
 

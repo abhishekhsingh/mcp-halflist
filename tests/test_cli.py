@@ -1,5 +1,6 @@
 import json
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -116,6 +117,41 @@ def test_cli_incomplete_oauth() -> None:
     )
     assert result.exit_code == 3
     assert "OAuth requires all of" in result.output
+
+
+def test_cli_check_junit_format() -> None:
+    cmd = f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"
+    result = runner.invoke(app, ["check", "--stdio", cmd, "--format", "junit"])
+    assert result.exit_code == 0
+
+    output = result.output.strip()
+    assert output.startswith("<?xml")
+    root = ET.fromstring(output.split("\n", 1)[1])
+    assert root.tag == "testsuites"
+    assert root.get("name") == "halflist"
+    assert int(root.get("tests", "0")) > 0
+
+
+def test_cli_report_junit_file_output(tmp_path: Path) -> None:
+    cmd = f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"
+    json_file = tmp_path / "results.json"
+    result = runner.invoke(app, ["check", "--stdio", cmd, "--format", "json"])
+    assert result.exit_code == 0
+    json_file.write_text(result.output)
+
+    out_file = tmp_path / "results.xml"
+    result = runner.invoke(
+        app,
+        ["report", str(json_file), "--format", "junit", "-o", str(out_file)],
+    )
+    assert result.exit_code == 0
+    assert out_file.exists()
+
+    xml_str = out_file.read_text()
+    assert xml_str.startswith("<?xml")
+    root = ET.fromstring(xml_str.split("\n", 1)[1])
+    assert root.tag == "testsuites"
+    assert int(root.get("tests", "0")) > 0
 
 
 def test_cli_check_full_server_5_suites() -> None:

@@ -70,7 +70,7 @@ Run protocol conformance and security checks against an MCP server.
 | `--callback-port` | | `3030-3039` | Port for the OAuth callback server. Requires `--http` |
 | `--no-auth` | | off | Skip automatic OAuth PKCE authentication. Requires `--http` |
 | `--args-file` | | | JSON file mapping tool names to custom arguments for smoke tests |
-| `--format` | | `terminal` | Output format: `terminal` or `json` |
+| `--format` | | `terminal` | Output format: `terminal`, `json`, or `junit` |
 | `--suite` | | all suites | Suite(s) to run. Repeatable (e.g. `--suite handshake --suite security`) |
 | `--verbose` | `-v` | off | Show all check details including passing checks |
 | `--quiet` | `-q` | off | Suppress server stderr output. Auto-enabled with `--format json` |
@@ -110,6 +110,9 @@ halflist check --stdio "python3 my_server.py" --suite handshake --suite tools
 
 # JSON output for CI pipelines
 halflist check --stdio "python3 my_server.py" --format json
+
+# JUnit XML output for CI test reporters (GitHub Actions, GitLab, Jenkins)
+halflist check --stdio "python3 my_server.py" --format junit -o results.xml
 
 # Verbose output showing all checks
 halflist check --stdio "python3 my_server.py" --verbose
@@ -169,7 +172,7 @@ Each tool is called with synthetically generated arguments based on its `inputSc
 | `--all` | | off | Benchmark all discovered tools |
 | `--iterations` | `-n` | `10` | Number of measured iterations per tool |
 | `--warmup` | `-w` | `2` | Warmup iterations, discarded before measuring |
-| `--format` | | `terminal` | Output format: `terminal` or `json` |
+| `--format` | | `terminal` | Output format: `terminal`, `json`, or `junit` |
 | `--quiet` | `-q` | off | Suppress server stderr output. Auto-enabled with `--format json` |
 | `--timeout` | | `30` | Timeout in seconds per operation (also limits each individual tool call during benchmarks) |
 | `--debug` | `-d` | off | Enable debug logging to stderr |
@@ -202,6 +205,9 @@ halflist bench --stdio "python3 my_server.py" --tool search --args-file args.jso
 
 # JSON output for CI
 halflist bench --stdio "python3 my_server.py" --format json
+
+# JUnit XML output
+halflist bench --stdio "python3 my_server.py" --format junit -o bench.xml
 ```
 
 ### Output
@@ -247,7 +253,7 @@ Audit always runs all suites (no `--suite` filter) and benchmarks all discovered
 | `--iterations` | `-n` | `10` | Benchmark iterations per tool |
 | `--warmup` | `-w` | `2` | Warmup iterations, discarded before measuring |
 | `--verbose` | `-v` | off | Show all check details including passing checks |
-| `--format` | | `terminal` | Output format: `terminal` or `json` |
+| `--format` | | `terminal` | Output format: `terminal`, `json`, or `junit` |
 | `--quiet` | `-q` | off | Suppress server stderr output. Auto-enabled with `--format json` |
 | `--timeout` | | `30` | Timeout in seconds per operation (also limits each individual tool call during benchmarks) |
 | `--verify-pins` | | off | Verify tool definitions against a saved pin snapshot |
@@ -268,6 +274,9 @@ halflist audit --http http://localhost:8080/mcp
 
 # JSON output for CI
 halflist audit --stdio "python3 my_server.py" --format json
+
+# JUnit XML output for CI test reporters
+halflist audit --stdio "python3 my_server.py" --format junit -o audit.xml
 
 # With pin verification
 halflist audit --stdio "python3 my_server.py" --verify-pins
@@ -351,7 +360,7 @@ Generate markdown, HTML, or an SVG badge from a halflist JSON report file. Auto-
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `JSON_FILE` | | *(required)* | Path to a halflist JSON report file |
-| `--format` | | `markdown` | Output format: `markdown` or `html` |
+| `--format` | | `markdown` | Output format: `markdown`, `html`, or `junit` |
 | `--badge` | | off | Generate an SVG badge instead of a report |
 | `--output` | `-o` | stdout | Write output to a file |
 | `--debug` | `-d` | off | Enable debug logging to stderr |
@@ -377,6 +386,9 @@ halflist audit --stdio "python3 my_server.py" --format json | halflist report /d
 # Benchmark report as HTML
 halflist bench --stdio "python3 my_server.py" --format json > bench.json
 halflist report bench.json --format html -o bench.html
+
+# JUnit XML from a saved JSON report
+halflist report results.json --format junit -o results.xml
 ```
 
 ### HTML Reports

@@ -274,17 +274,15 @@ def test_merge_headers_both_present() -> None:
 
 
 def test_config_flag_on_all_commands() -> None:
-    import re
-
     from typer.testing import CliRunner
 
     from halflist.cli import app
+    from tests.conftest import strip_ansi
 
-    _ansi = re.compile(r"\x1b\[[0-9;]*m")
     runner = CliRunner()
     for cmd in ("check", "bench", "audit", "watch", "pin", "report"):
         result = runner.invoke(app, [cmd, "--help"])
-        plain = _ansi.sub("", result.output)
+        plain = strip_ansi(result.output)
         assert "--config" in plain, f"--config missing from {cmd}"
 
 

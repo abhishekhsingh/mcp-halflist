@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from typing import Any
 
@@ -1311,3 +1312,195 @@ def render_badge_svg(data: dict[str, Any]) -> str:
         value=value,
         color=color,
     )
+
+
+# ---------------------------------------------------------------------------
+# JUnit XML generation
+# ---------------------------------------------------------------------------
+
+
+def _junit_suites_elements(suites: list[dict[str, Any]]) -> list[ET.Element]:
+    elements = []
+    for suite in suites:
+        suite_name = suite.get("name", "unknown")
+        checks = suite.get("checks", [])
+        failures = 0
+        skipped = 0
+        for c in checks:
+            st = c.get("status", "PASS")
+            if st in ("FAIL", "WARN"):
+                failures += 1
+            elif st == "SKIP":
+                skipped += 1
+
+        ts_el = ET.Element(
+            "testsuite",
+            name=suite_name,
+            tests=str(len(checks)),
+            failures=str(failures),
+            errors="0",
+            skipped=str(skipped),
+            time=f"{suite.get('duration_ms', 0) / 1000:.3f}",
+        )
+
+        for c in checks:
+            tc = ET.SubElement(
+                ts_el,
+                "testcase",
+                classname=f"halflist.{suite_name}",
+                name=c.get("name", ""),
+                time=f"{c.get('duration_ms', 0) / 1000:.3f}",
+            )
+            status = c.get("status", "PASS")
+            msg = c.get("message") or ""
+            if status == "FAIL":
+                ET.SubElement(tc, "failure", message=msg, type="FAIL")
+            elif status == "WARN":
+                ET.SubElement(tc, "failure", message=msg, type="WARN")
+            elif status == "SKIP":
+                ET.SubElement(tc, "skipped", message=msg)
+
+        elements.append(ts_el)
+    return elements
+
+
+def _junit_bench_element(benchmarks: list[dict[str, Any]]) -> ET.Element:
+    failures = 0
+    skipped_count = 0
+    total_time = 0.0
+
+    for b in benchmarks:
+        if b.get("skipped"):
+            skipped_count += 1
+        elif b.get("errors", 0) > 0:
+            failures += 1
+        total_time += b.get("mean_ms", 0) / 1000
+
+    ts_el = ET.Element(
+        "testsuite",
+        name="benchmarks",
+        tests=str(len(benchmarks)),
+        failures=str(failures),
+        errors="0",
+        skipped=str(skipped_count),
+        time=f"{total_time:.3f}",
+    )
+
+    for b in benchmarks:
+        tool_name = b.get("tool_name", "unknown")
+        tc = ET.SubElement(
+            ts_el,
+            "testcase",
+            classname="halflist.bench",
+            name=tool_name,
+            time=f"{b.get('mean_ms', 0) / 1000:.3f}",
+        )
+
+        if b.get("skipped"):
+            reason = b.get("skip_reason") or "skipped"
+            ET.SubElement(tc, "skipped", message=reason)
+        elif b.get("errors", 0) > 0:
+            err_count = b["errors"]
+            iters = b.get("iterations", 0)
+            ET.SubElement(tc, "failure", message=f"{err_count}/{iters} calls failed", type="ERROR")
+        else:
+            props = ET.SubElement(tc, "properties")
+            ET.SubElement(props, "property", name="p50_ms", value=str(round(b.get("median_ms", 0))))
+            ET.SubElement(props, "property", name="p95_ms", value=str(round(b.get("p95_ms", 0))))
+            ET.SubElement(props, "property", name="p99_ms", value=str(round(b.get("p99_ms", 0))))
+            ET.SubElement(props, "property", name="iterations", value=str(b.get("iterations", 0)))
+
+    return ts_el
+
+
+def render_check_junit(data: dict[str, Any]) -> str:
+    suites = data.get("suites", [])
+    total_tests = 0
+    total_failures = 0
+    total_skipped = 0
+
+    suite_elements = _junit_suites_elements(suites)
+    for ts_el in suite_elements:
+        total_tests += int(ts_el.get("tests", "0"))
+        total_failures += int(ts_el.get("failures", "0"))
+        total_skipped += int(ts_el.get("skipped", "0"))
+
+    root = ET.Element(
+        "testsuites",
+        name="halflist",
+        tests=str(total_tests),
+        failures=str(total_failures),
+        errors="0",
+        skipped=str(total_skipped),
+        time=f"{data.get('total_duration_ms', 0) / 1000:.3f}",
+        timestamp=data.get("timestamp", ""),
+    )
+    for el in suite_elements:
+        root.append(el)
+
+    ET.indent(root)
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding="unicode")
+
+
+def render_bench_junit(data: dict[str, Any]) -> str:
+    benchmarks = data.get("benchmarks", [])
+    bench_el = _junit_bench_element(benchmarks)
+
+    total_tests = int(bench_el.get("tests", "0"))
+    total_failures = int(bench_el.get("failures", "0"))
+    total_skipped = int(bench_el.get("skipped", "0"))
+
+    root = ET.Element(
+        "testsuites",
+        name="halflist",
+        tests=str(total_tests),
+        failures=str(total_failures),
+        errors="0",
+        skipped=str(total_skipped),
+        time=f"{data.get('total_duration_ms', 0) / 1000:.3f}",
+        timestamp=data.get("timestamp", ""),
+    )
+    root.append(bench_el)
+
+    ET.indent(root)
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding="unicode")
+
+
+def render_audit_junit(data: dict[str, Any]) -> str:
+    suites = data.get("suites", [])
+    benchmarks = data.get("benchmarks", [])
+
+    suite_elements = _junit_suites_elements(suites)
+    bench_el = _junit_bench_element(benchmarks) if benchmarks else None
+
+    total_tests = 0
+    total_failures = 0
+    total_skipped = 0
+
+    for ts_el in suite_elements:
+        total_tests += int(ts_el.get("tests", "0"))
+        total_failures += int(ts_el.get("failures", "0"))
+        total_skipped += int(ts_el.get("skipped", "0"))
+
+    if bench_el is not None:
+        total_tests += int(bench_el.get("tests", "0"))
+        total_failures += int(bench_el.get("failures", "0"))
+        total_skipped += int(bench_el.get("skipped", "0"))
+
+    root = ET.Element(
+        "testsuites",
+        name="halflist",
+        tests=str(total_tests),
+        failures=str(total_failures),
+        errors="0",
+        skipped=str(total_skipped),
+        time=f"{data.get('total_duration_ms', 0) / 1000:.3f}",
+        timestamp=data.get("timestamp", ""),
+    )
+    for el in suite_elements:
+        root.append(el)
+    if bench_el is not None:
+        root.append(bench_el)
+
+    ET.indent(root)
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding="unicode")

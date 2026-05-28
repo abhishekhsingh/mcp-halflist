@@ -88,7 +88,7 @@ class WatchConfig(BaseModel):
 
 
 class OutputConfig(BaseModel):
-    format: Literal["terminal", "json"] | None = None
+    format: Literal["terminal", "json", "junit"] | None = None
     quiet: bool = False
 
 
@@ -97,7 +97,7 @@ class PinConfig(BaseModel):
 
 
 class ReportConfig(BaseModel):
-    format: Literal["markdown", "html"] | None = None
+    format: Literal["markdown", "html", "junit"] | None = None
 
 
 class DebugConfig(BaseModel):

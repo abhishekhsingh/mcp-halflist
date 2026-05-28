@@ -397,8 +397,10 @@ def check(
 
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
 
-    if format not in ("terminal", "json"):
-        console.print(f"[red]Error:[/red] Unknown format '{format}'. Use 'terminal' or 'json'.")
+    if format not in ("terminal", "json", "junit"):
+        console.print(
+            f"[red]Error:[/red] Unknown format '{format}'. Use 'terminal', 'json', or 'junit'."
+        )
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     err = _validate_transport(
@@ -417,7 +419,7 @@ def check(
         raise typer.Exit(err)
 
     tool_args = _load_tool_args(args_file)
-    effective_quiet = quiet or format == "json"
+    effective_quiet = quiet or format in ("json", "junit")
     exit_code = asyncio.run(
         _run_checks(
             stdio,
@@ -473,24 +475,25 @@ async def _run_checks(
         build_report,
         print_banner,
         print_connection,
+        render_check_junit,
         render_final_report,
         render_json,
     )
     from halflist.suites.security import SecuritySuite
 
-    is_json = format == "json"
+    is_piped = format in ("json", "junit")
     progress_console = (
         Console(stderr=True)
-        if is_json and sys.stderr.isatty()
+        if is_piped and sys.stderr.isatty()
         else Console(file=io.StringIO())
-        if is_json
+        if is_piped
         else console
     )
     client = HalflistClient(timeout=timeout, quiet=quiet)
     callback_server = None
 
     try:
-        if not is_json:
+        if not is_piped:
             print_banner(progress_console)
 
         headers = await _resolve_headers(
@@ -517,7 +520,7 @@ async def _run_checks(
                 await _connect_client(client, stdio, http, headers, auth=auth_provider)
                 server_info = await client.initialize()
             except Exception as e:
-                if is_json:
+                if format == "json":
                     import json
 
                     err = {"error": str(e), "exit_code": EXIT_TRANSPORT_ERROR}
@@ -580,8 +583,10 @@ async def _run_checks(
 
         report = build_report(server_info, suite_results, transport=client.transport)
 
-        if is_json:
+        if format == "json":
             print(render_json(report))
+        elif format == "junit":
+            print(render_check_junit(report.model_dump()))
         else:
             render_final_report(console, report, verbose, is_filtered=bool(suite_filter))
 
@@ -692,8 +697,10 @@ def bench(
 
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
 
-    if format not in ("terminal", "json"):
-        console.print(f"[red]Error:[/red] Unknown format '{format}'. Use 'terminal' or 'json'.")
+    if format not in ("terminal", "json", "junit"):
+        console.print(
+            f"[red]Error:[/red] Unknown format '{format}'. Use 'terminal', 'json', or 'junit'."
+        )
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     err = _validate_transport(
@@ -712,7 +719,7 @@ def bench(
         raise typer.Exit(err)
 
     tool_args = _load_tool_args(args_file)
-    effective_quiet = quiet or format == "json"
+    effective_quiet = quiet or format in ("json", "junit")
     exit_code = asyncio.run(
         _run_bench(
             stdio,
@@ -774,22 +781,23 @@ async def _run_bench(
         print_banner,
         print_connection,
         render_bench_json,
+        render_bench_junit,
         render_bench_report,
     )
 
-    is_json = format == "json"
+    is_piped = format in ("json", "junit")
     progress_console = (
         Console(stderr=True)
-        if is_json and sys.stderr.isatty()
+        if is_piped and sys.stderr.isatty()
         else Console(file=io.StringIO())
-        if is_json
+        if is_piped
         else console
     )
     client = HalflistClient(timeout=timeout, quiet=quiet)
     callback_server = None
 
     try:
-        if not is_json:
+        if not is_piped:
             print_banner(progress_console)
 
         headers = await _resolve_headers(
@@ -818,7 +826,7 @@ async def _run_bench(
                 server_info = await client.initialize()
                 connection_ms = (time.monotonic() - t0) * 1000
             except Exception as e:
-                if is_json:
+                if format == "json":
                     import json
 
                     err = {"error": str(e), "exit_code": EXIT_TRANSPORT_ERROR}
@@ -900,8 +908,10 @@ async def _run_bench(
             total_duration_ms=round(total_duration, 2),
         )
 
-        if is_json:
+        if format == "json":
             print(render_bench_json(report))
+        elif format == "junit":
+            print(render_bench_junit(report.model_dump()))
         else:
             render_bench_report(console, report)
 
@@ -1010,8 +1020,10 @@ def audit(
 
     setup_debug_logging(debug=debug or debug_log is not None, debug_log=debug_log)
 
-    if format not in ("terminal", "json"):
-        console.print(f"[red]Error:[/red] Unknown format '{format}'. Use 'terminal' or 'json'.")
+    if format not in ("terminal", "json", "junit"):
+        console.print(
+            f"[red]Error:[/red] Unknown format '{format}'. Use 'terminal', 'json', or 'junit'."
+        )
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     err = _validate_transport(
@@ -1030,7 +1042,7 @@ def audit(
         raise typer.Exit(err)
 
     tool_args = _load_tool_args(args_file)
-    effective_quiet = quiet or format == "json"
+    effective_quiet = quiet or format in ("json", "junit")
     exit_code = asyncio.run(
         _run_audit(
             stdio,
@@ -1094,23 +1106,24 @@ async def _run_audit(
         print_banner,
         print_connection,
         render_audit_json,
+        render_audit_junit,
         render_audit_report,
     )
     from halflist.suites.security import SecuritySuite
 
-    is_json = format == "json"
+    is_piped = format in ("json", "junit")
     progress_console = (
         Console(stderr=True)
-        if is_json and sys.stderr.isatty()
+        if is_piped and sys.stderr.isatty()
         else Console(file=io.StringIO())
-        if is_json
+        if is_piped
         else console
     )
     client = HalflistClient(timeout=timeout, quiet=quiet)
     callback_server = None
 
     try:
-        if not is_json:
+        if not is_piped:
             print_banner(progress_console)
 
         headers = await _resolve_headers(
@@ -1139,7 +1152,7 @@ async def _run_audit(
                 server_info = await client.initialize()
                 connection_ms = (time.monotonic() - t0) * 1000
             except Exception as e:
-                if is_json:
+                if format == "json":
                     import json
 
                     err = {"error": str(e), "exit_code": EXIT_TRANSPORT_ERROR}
@@ -1257,8 +1270,10 @@ async def _run_audit(
             total_duration_ms=round(total_duration, 2),
         )
 
-        if is_json:
+        if format == "json":
             print(render_audit_json(report))
+        elif format == "junit":
+            print(render_audit_junit(report.model_dump()))
         else:
             render_audit_report(console, report, verbose)
 
@@ -1521,7 +1536,9 @@ async def _run_watch(
 @app.command()
 def report(
     json_file: Path = typer.Argument(..., help="Path to a halflist JSON report file."),
-    format: Optional[str] = typer.Option(None, "--format", help="Output format: markdown or html."),
+    format: Optional[str] = typer.Option(
+        None, "--format", help="Output format: markdown, html, or junit."
+    ),
     badge: bool = typer.Option(False, "--badge", help="Generate an SVG badge instead."),
     output: Optional[str] = typer.Option(None, "-o", "--output", help="Write output to file."),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
@@ -1532,7 +1549,7 @@ def report(
         None, "--config", help="Path to halflist.toml config file."
     ),
 ) -> None:
-    """Generate markdown, HTML, or badge from a halflist JSON report."""
+    """Generate markdown, HTML, JUnit XML, or badge from a halflist JSON report."""
     config = load_config(config_path)
     if config:
         debug = merge_bool(debug, config.debug.enabled)
@@ -1547,16 +1564,21 @@ def report(
     from halflist.report import (
         detect_report_type,
         render_audit_html,
+        render_audit_junit,
         render_audit_markdown,
         render_badge_svg,
         render_bench_html,
+        render_bench_junit,
         render_bench_markdown,
         render_check_html,
+        render_check_junit,
         render_check_markdown,
     )
 
-    if format not in ("markdown", "html"):
-        console.print(f"[red]Error:[/red] Unknown format '{format}'. Use 'markdown' or 'html'.")
+    if format not in ("markdown", "html", "junit"):
+        console.print(
+            f"[red]Error:[/red] Unknown format '{format}'. Use 'markdown', 'html', or 'junit'."
+        )
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     if not json_file.exists():
@@ -1583,6 +1605,11 @@ def report(
                 "check": render_check_html,
                 "bench": render_bench_html,
                 "audit": render_audit_html,
+            },
+            "junit": {
+                "check": render_check_junit,
+                "bench": render_bench_junit,
+                "audit": render_audit_junit,
             },
         }
         renderer = renderers[format].get(report_type)

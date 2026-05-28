@@ -276,16 +276,15 @@ async def test_log_response(caplog: pytest.LogCaptureFixture) -> None:
 
 
 def test_debug_flag_on_all_commands() -> None:
-    import re
-
     from typer.testing import CliRunner
-    from halflist.cli import app
 
-    _ansi = re.compile(r"\x1b\[[0-9;]*m")
+    from halflist.cli import app
+    from tests.conftest import strip_ansi
+
     runner = CliRunner()
     for cmd in ("check", "bench", "audit", "watch", "pin", "report"):
         result = runner.invoke(app, [cmd, "--help"])
-        plain = _ansi.sub("", result.output)
+        plain = strip_ansi(result.output)
         assert "--debug" in plain, f"--debug missing from {cmd}"
         assert "--debug-log" in plain, f"--debug-log missing from {cmd}"
 
