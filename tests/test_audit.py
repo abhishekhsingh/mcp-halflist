@@ -38,9 +38,7 @@ def test_audit_json() -> None:
 
 
 def test_audit_terminal() -> None:
-    result = runner.invoke(
-        app, ["audit", "--stdio", _good_cmd(), "-n", "2", "-w", "0"]
-    )
+    result = runner.invoke(app, ["audit", "--stdio", _good_cmd(), "-n", "2", "-w", "0"])
     assert result.exit_code == 0
     assert "Connected" in result.output
     assert "passed" in result.output

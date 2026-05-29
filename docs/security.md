@@ -1,16 +1,16 @@
 # Security Scanning
 
-halflist scans MCP server tool descriptions for security vulnerabilities. All scanning is **fully offline** — zero API calls, zero data sharing, zero external dependencies.
+halflist scans MCP server tool descriptions for security vulnerabilities. All scanning is **fully offline**: zero API calls, zero data sharing, zero external dependencies.
 
 ## Why This Matters
 
 MCP tool descriptions are injected into LLM context as part of every interaction. A malicious or compromised server can embed hidden instructions in tool descriptions that manipulate the LLM into:
 
-- **Exfiltrating data** — reading sensitive files and sending them to attacker-controlled endpoints
-- **Hijacking behavior** — overriding other tools or changing how the LLM responds
-- **Rug pull attacks** — silently changing tool definitions after initial trust is established
+- **Exfiltrating data**: reading sensitive files and sending them to attacker-controlled endpoints
+- **Hijacking behavior**: overriding other tools or changing how the LLM responds
+- **Rug pull attacks**: silently changing tool definitions after initial trust is established
 
-These attacks are invisible to the user — the tool description is consumed by the LLM, not displayed in the UI. halflist inspects these descriptions before they reach the model.
+These attacks are invisible to the user. The tool description is consumed by the LLM, not displayed in the UI. halflist inspects these descriptions before they reach the model.
 
 ## The 5 Security Checks
 
@@ -38,7 +38,7 @@ Detects patterns commonly used to hijack LLM behavior via tool descriptions.
 
 | Condition | Detail |
 |-----------|--------|
-| HTML comments (`<!-- -->`) | Instructions hidden in comments — suspicious but not always malicious |
+| HTML comments (`<!-- -->`) | Instructions hidden in comments, suspicious but not always malicious |
 | Description length > 2000 characters | Unusually long for a legitimate tool description |
 | Imperative sentence count > 8 | Excessive imperatives warrant manual review |
 
@@ -48,7 +48,7 @@ Long descriptions, excessive imperatives, and HTML comments aren't inherently ma
 
 Detects references to sensitive file paths and credential-reading instructions.
 
-**FAIL triggers — file paths:**
+**FAIL triggers, file paths:**
 
 | Path | What it targets |
 |------|----------------|
@@ -59,7 +59,7 @@ Detects references to sensitive file paths and credential-reading instructions.
 | `~/.config` | Application configuration (often contains tokens) |
 | `/etc/passwd`, `/etc/shadow` | System user credentials |
 
-**FAIL triggers — imperative instructions:**
+**FAIL triggers, imperative instructions:**
 
 | Pattern | Example |
 |---------|---------|
@@ -79,7 +79,7 @@ Detects references to sensitive file paths and credential-reading instructions.
 
 Detects tools that attempt to influence how other tools are used.
 
-**FAIL triggers — specific tool targeting:**
+**FAIL triggers, specific tool targeting:**
 
 | Pattern | What it does |
 |---------|-------------|
@@ -91,7 +91,7 @@ Detects tools that attempt to influence how other tools are used.
 
 These patterns are checked against every other tool name registered on the server.
 
-**FAIL triggers — generic manipulation:**
+**FAIL triggers, generic manipulation:**
 
 | Pattern | What it does |
 |---------|-------------|
@@ -113,7 +113,7 @@ Detects attempts to hide instructions through encoding or invisible characters.
 
 | Technique | Detection |
 |-----------|-----------|
-| HTML entities | `&lt;`, `&gt;`, `&#x...;`, `&#...;` — may be used to bypass text-based pattern matching |
+| HTML entities | `&lt;`, `&gt;`, `&#x...;`, `&#...;`, may be used to bypass text-based pattern matching |
 
 ### 5. Tool Pin Verification
 
@@ -151,7 +151,7 @@ This catches **rug pull attacks** where a server passes initial review, then sil
 | **Conformance testing** | Yes | No |
 | **Pin / rug pull detection** | Yes | Yes (signature verification) |
 
-halflist's approach is deterministic and reproducible — the same tool description always produces the same result. It runs entirely on your machine with no external calls.
+halflist's approach is deterministic and reproducible. The same tool description always produces the same result. It runs entirely on your machine with no external calls.
 
 ## Adding halflist Security Scanning to CI
 
@@ -169,4 +169,4 @@ halflist pin --stdio "python3 my_server.py" -o ./pins/my-server.json
 halflist check --stdio "python3 my_server.py" --verify-pins
 ```
 
-The exit code is `1` if any security check fails, making it straightforward to gate deployments.
+The exit code is `1` if any security check fails, so you can gate deployments on it.

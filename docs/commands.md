@@ -2,6 +2,18 @@
 
 Complete documentation for all halflist commands.
 
+## Configuration File
+
+All commands accept `--config <path>` to specify a TOML config file. Without `--config`, halflist searches these locations in order:
+
+1. `halflist.toml` in the current directory
+2. `.halflist.toml` in the current directory
+3. `~/.halflist/config.toml`
+
+If no config file is found, all defaults apply as before. CLI flags always override config values.
+
+See the full config format in the [Configuration section of the README](https://github.com/abhishekhsingh/mcp-halflist#configuration).
+
 ## Exit Codes
 
 All commands that connect to a server use the same exit codes:
@@ -15,17 +27,32 @@ All commands that connect to a server use the same exit codes:
 
 ---
 
+## Authentication
+
+All commands that connect via `--http` support three authentication tiers. When multiple methods are configured, the highest-priority tier wins:
+
+| Priority | Method | Flags |
+|----------|--------|-------|
+| 1 (highest) | Static headers | `--header "Authorization: Bearer ..."` |
+| 2 | OAuth2 client credentials | `--oauth-token-url`, `--oauth-client-id`, `--oauth-client-secret` |
+| 3 | OAuth2 PKCE (automatic) | Triggered on 401 if no higher tier is configured |
+| - | No auth | `--no-auth` disables automatic PKCE |
+
+**PKCE token storage:** Tokens are cached at `~/.halflist/tokens/` with `0o600` file permissions. Use `--clear-tokens` to delete cached tokens and re-authenticate.
+
+---
+
 ## `halflist check`
 
 Run protocol conformance and security checks against an MCP server.
 
 ### Suites
 
-- **handshake** (6 checks) — initialize, protocol version, capabilities, server info, initialized notification, ping/pong
-- **tools** (11 checks) — tools/list validation, naming, descriptions, schemas, tool call smoke test
-- **resources** (8 checks) — resources/list validation, uri/name checks, resources/read smoke test, content item validation, mimeType format. Skipped if the server does not advertise the resources capability.
-- **prompts** (7 checks) — prompts/list validation, name/description checks, prompts/get smoke test, message role/content validation. Skipped if the server does not advertise the prompts capability.
-- **security** (5 checks) — prompt injection scan, data exfiltration references, cross-tool manipulation, suspicious encoding, tool pin verification
+- **handshake** (6 checks): initialize, protocol version, capabilities, server info, initialized notification, ping/pong
+- **tools** (11 checks): tools/list validation, naming, descriptions, schemas, tool call smoke test
+- **resources** (8 checks): resources/list validation, uri/name checks, resources/read smoke test, content item validation, mimeType format. Skipped if the server does not advertise the resources capability.
+- **prompts** (7 checks): prompts/list validation, name/description checks, prompts/get smoke test, message role/content validation. Skipped if the server does not advertise the prompts capability.
+- **security** (5 checks): prompt injection scan, data exfiltration references, cross-tool manipulation, suspicious encoding, tool pin verification
 
 ### Options
 
@@ -38,14 +65,24 @@ Run protocol conformance and security checks against an MCP server.
 | `--oauth-client-id` | | | OAuth2 client ID |
 | `--oauth-client-secret` | | | OAuth2 client secret |
 | `--oauth-scope` | | | OAuth2 scope (optional) |
-| `--format` | | `terminal` | Output format: `terminal` or `json` |
+| `--no-browser` | | off | Headless mode: print auth URL instead of opening browser. Requires `--http` |
+| `--clear-tokens` | | off | Clear stored OAuth PKCE tokens before connecting. Requires `--http` |
+| `--callback-port` | | `3030-3039` | Port for the OAuth callback server. Requires `--http` |
+| `--no-auth` | | off | Skip automatic OAuth PKCE authentication. Requires `--http` |
+| `--args-file` | | | JSON file mapping tool names to custom arguments for smoke tests |
+| `--format` | | `terminal` | Output format: `terminal`, `json`, or `junit` |
 | `--suite` | | all suites | Suite(s) to run. Repeatable (e.g. `--suite handshake --suite security`) |
 | `--verbose` | `-v` | off | Show all check details including passing checks |
 | `--quiet` | `-q` | off | Suppress server stderr output. Auto-enabled with `--format json` |
 | `--timeout` | | `30` | Timeout in seconds per operation |
 | `--verify-pins` | | off | Verify tool definitions against a saved pin snapshot |
+| `--debug` | `-d` | off | Enable debug logging to stderr |
+| `--debug-log` | | | Write debug log to file (implies `--debug`) |
+| `--config` | | | Path to halflist.toml config file |
 
-Either `--stdio` or `--http` is required. They are mutually exclusive. Auth flags (`--header`, `--oauth-*`) require `--http`.
+Either `--stdio` or `--http` is required (unless configured in halflist.toml). They are mutually exclusive. Auth flags (`--header`, `--oauth-*`, `--no-browser`, `--clear-tokens`, `--callback-port`, `--no-auth`) require `--http`.
+
+**Environment variable:** Set `HALFLIST_LOG_LEVEL=DEBUG` (or `INFO`, `WARNING`) to enable debug logging without `--debug`. Useful in CI environments. Applies to all commands.
 
 ### Examples
 
@@ -74,14 +111,29 @@ halflist check --stdio "python3 my_server.py" --suite handshake --suite tools
 # JSON output for CI pipelines
 halflist check --stdio "python3 my_server.py" --format json
 
+# JUnit XML output for CI test reporters (GitHub Actions, GitLab, Jenkins)
+halflist check --stdio "python3 my_server.py" --format junit -o results.xml
+
 # Verbose output showing all checks
 halflist check --stdio "python3 my_server.py" --verbose
 
-# Quiet mode — suppress server stderr noise
+# Quiet mode - suppress server stderr noise
 halflist check --stdio "python3 my_server.py" --quiet
 
 # Verify tool definitions against a saved pin
 halflist check --stdio "python3 my_server.py" --verify-pins
+
+# HTTP with automatic OAuth PKCE (opens browser on 401)
+halflist check --http https://mcp.example.com/v1
+
+# OAuth PKCE headless mode (prints URL to terminal)
+halflist check --http https://mcp.example.com/v1 --no-browser
+
+# Clear cached tokens and re-authenticate
+halflist check --http https://mcp.example.com/v1 --clear-tokens
+
+# Skip automatic OAuth PKCE
+halflist check --http https://mcp.example.com/v1 --no-auth
 ```
 
 ### Score
@@ -111,15 +163,23 @@ Each tool is called with synthetically generated arguments based on its `inputSc
 | `--oauth-client-id` | | | OAuth2 client ID |
 | `--oauth-client-secret` | | | OAuth2 client secret |
 | `--oauth-scope` | | | OAuth2 scope (optional) |
+| `--no-browser` | | off | Headless mode: print auth URL instead of opening browser. Requires `--http` |
+| `--clear-tokens` | | off | Clear stored OAuth PKCE tokens before connecting. Requires `--http` |
+| `--callback-port` | | `3030-3039` | Port for the OAuth callback server. Requires `--http` |
+| `--no-auth` | | off | Skip automatic OAuth PKCE authentication. Requires `--http` |
+| `--args-file` | | | JSON file mapping tool names to custom arguments for benchmarks |
 | `--tool` | | first 5 | Tool(s) to benchmark. Repeatable (e.g. `--tool echo --tool search`) |
 | `--all` | | off | Benchmark all discovered tools |
 | `--iterations` | `-n` | `10` | Number of measured iterations per tool |
 | `--warmup` | `-w` | `2` | Warmup iterations, discarded before measuring |
-| `--format` | | `terminal` | Output format: `terminal` or `json` |
+| `--format` | | `terminal` | Output format: `terminal`, `json`, or `junit` |
 | `--quiet` | `-q` | off | Suppress server stderr output. Auto-enabled with `--format json` |
-| `--timeout` | | `30` | Timeout in seconds per operation |
+| `--timeout` | | `30` | Timeout in seconds per operation (also limits each individual tool call during benchmarks) |
+| `--debug` | `-d` | off | Enable debug logging to stderr |
+| `--debug-log` | | | Write debug log to file (implies `--debug`) |
+| `--config` | | | Path to halflist.toml config file |
 
-Either `--stdio` or `--http` is required. They are mutually exclusive.
+Either `--stdio` or `--http` is required (unless configured in halflist.toml). They are mutually exclusive.
 
 ### Examples
 
@@ -139,8 +199,15 @@ halflist bench --stdio "python3 my_server.py" --tool echo --tool search
 # 50 iterations with 5 warmup calls
 halflist bench --stdio "python3 my_server.py" --all -n 50 -w 5
 
+# Custom arguments for tools that need real inputs
+# args.json: {"search": {"query": "hello", "limit": 5}}
+halflist bench --stdio "python3 my_server.py" --tool search --args-file args.json
+
 # JSON output for CI
 halflist bench --stdio "python3 my_server.py" --format json
+
+# JUnit XML output
+halflist bench --stdio "python3 my_server.py" --format junit -o bench.xml
 ```
 
 ### Output
@@ -178,20 +245,28 @@ Audit always runs all suites (no `--suite` filter) and benchmarks all discovered
 | `--oauth-client-id` | | | OAuth2 client ID |
 | `--oauth-client-secret` | | | OAuth2 client secret |
 | `--oauth-scope` | | | OAuth2 scope (optional) |
+| `--no-browser` | | off | Headless mode: print auth URL instead of opening browser. Requires `--http` |
+| `--clear-tokens` | | off | Clear stored OAuth PKCE tokens before connecting. Requires `--http` |
+| `--callback-port` | | `3030-3039` | Port for the OAuth callback server. Requires `--http` |
+| `--no-auth` | | off | Skip automatic OAuth PKCE authentication. Requires `--http` |
+| `--args-file` | | | JSON file mapping tool names to custom arguments for benchmarks and smoke tests |
 | `--iterations` | `-n` | `10` | Benchmark iterations per tool |
 | `--warmup` | `-w` | `2` | Warmup iterations, discarded before measuring |
 | `--verbose` | `-v` | off | Show all check details including passing checks |
-| `--format` | | `terminal` | Output format: `terminal` or `json` |
+| `--format` | | `terminal` | Output format: `terminal`, `json`, or `junit` |
 | `--quiet` | `-q` | off | Suppress server stderr output. Auto-enabled with `--format json` |
-| `--timeout` | | `30` | Timeout in seconds per operation |
+| `--timeout` | | `30` | Timeout in seconds per operation (also limits each individual tool call during benchmarks) |
 | `--verify-pins` | | off | Verify tool definitions against a saved pin snapshot |
+| `--debug` | `-d` | off | Enable debug logging to stderr |
+| `--debug-log` | | | Write debug log to file (implies `--debug`) |
+| `--config` | | | Path to halflist.toml config file |
 
-Either `--stdio` or `--http` is required. They are mutually exclusive.
+Either `--stdio` or `--http` is required (unless configured in halflist.toml). They are mutually exclusive.
 
 ### Examples
 
 ```bash
-# Full audit — conformance + security + benchmarks
+# Full audit: conformance + security + benchmarks
 halflist audit --stdio "npx -y @modelcontextprotocol/server-everything"
 
 # Audit via HTTP
@@ -200,8 +275,14 @@ halflist audit --http http://localhost:8080/mcp
 # JSON output for CI
 halflist audit --stdio "python3 my_server.py" --format json
 
+# JUnit XML output for CI test reporters
+halflist audit --stdio "python3 my_server.py" --format junit -o audit.xml
+
 # With pin verification
 halflist audit --stdio "python3 my_server.py" --verify-pins
+
+# Custom arguments for tools that need specific inputs
+halflist audit --http http://localhost:8080/mcp --args-file args.json
 
 # More iterations for stable latency numbers
 halflist audit --stdio "python3 my_server.py" -n 50 -w 5
@@ -232,13 +313,20 @@ Continuously monitor an MCP server's health. Each probe opens a fresh connection
 | `--oauth-client-id` | | | OAuth2 client ID |
 | `--oauth-client-secret` | | | OAuth2 client secret |
 | `--oauth-scope` | | | OAuth2 scope (optional) |
+| `--no-browser` | | off | Headless mode: print auth URL instead of opening browser. Requires `--http` |
+| `--clear-tokens` | | off | Clear stored OAuth PKCE tokens before connecting. Requires `--http` |
+| `--callback-port` | | `3030-3039` | Port for the OAuth callback server. Requires `--http` |
+| `--no-auth` | | off | Skip automatic OAuth PKCE authentication. Requires `--http` |
 | `--interval` | `-i` | `60` | Seconds between probes |
 | `--count` | `-c` | infinite | Number of probes before exiting |
 | `--log` | `-l` | none | Append JSONL probe results to this file |
 | `--quiet` | `-q` | off | Suppress server stderr output |
 | `--timeout` | | `30` | Timeout in seconds per operation |
+| `--debug` | `-d` | off | Enable debug logging to stderr |
+| `--debug-log` | | | Write debug log to file (implies `--debug`) |
+| `--config` | | | Path to halflist.toml config file |
 
-Either `--stdio` or `--http` is required. They are mutually exclusive.
+Either `--stdio` or `--http` is required (unless configured in halflist.toml). They are mutually exclusive.
 
 ### Examples
 
@@ -255,7 +343,7 @@ halflist watch --stdio "python3 my_server.py" --interval 30 --log health.jsonl
 # Run 10 probes and exit
 halflist watch --stdio "python3 my_server.py" --count 10
 
-# Quick smoke test — single probe
+# Quick smoke test, single probe
 halflist watch --stdio "python3 my_server.py" --count 1
 ```
 
@@ -272,9 +360,12 @@ Generate markdown, HTML, or an SVG badge from a halflist JSON report file. Auto-
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `JSON_FILE` | | *(required)* | Path to a halflist JSON report file |
-| `--format` | | `markdown` | Output format: `markdown` or `html` |
+| `--format` | | `markdown` | Output format: `markdown`, `html`, or `junit` |
 | `--badge` | | off | Generate an SVG badge instead of a report |
 | `--output` | `-o` | stdout | Write output to a file |
+| `--debug` | `-d` | off | Enable debug logging to stderr |
+| `--debug-log` | | | Write debug log to file (implies `--debug`) |
+| `--config` | | | Path to halflist.toml config file |
 
 ### Examples
 
@@ -295,6 +386,9 @@ halflist audit --stdio "python3 my_server.py" --format json | halflist report /d
 # Benchmark report as HTML
 halflist bench --stdio "python3 my_server.py" --format json > bench.json
 halflist report bench.json --format html -o bench.html
+
+# JUnit XML from a saved JSON report
+halflist report results.json --format junit -o results.xml
 ```
 
 ### HTML Reports
@@ -325,11 +419,18 @@ Pins are stored in `~/.halflist/pins/<server-name>.json` by default.
 | `--oauth-client-id` | | | OAuth2 client ID |
 | `--oauth-client-secret` | | | OAuth2 client secret |
 | `--oauth-scope` | | | OAuth2 scope (optional) |
+| `--no-browser` | | off | Headless mode: print auth URL instead of opening browser. Requires `--http` |
+| `--clear-tokens` | | off | Clear stored OAuth PKCE tokens before connecting. Requires `--http` |
+| `--callback-port` | | `3030-3039` | Port for the OAuth callback server. Requires `--http` |
+| `--no-auth` | | off | Skip automatic OAuth PKCE authentication. Requires `--http` |
 | `--output` | `-o` | `~/.halflist/pins/<name>.json` | Write pin file to a custom path |
 | `--quiet` | `-q` | off | Suppress server stderr output |
 | `--timeout` | | `30` | Timeout in seconds per operation |
+| `--debug` | `-d` | off | Enable debug logging to stderr |
+| `--debug-log` | | | Write debug log to file (implies `--debug`) |
+| `--config` | | | Path to halflist.toml config file |
 
-Either `--stdio` or `--http` is required. They are mutually exclusive.
+Either `--stdio` or `--http` is required (unless configured in halflist.toml). They are mutually exclusive.
 
 ### Examples
 

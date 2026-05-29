@@ -43,3 +43,20 @@ async def test_tools_bad_server(bad_server_cmd: str) -> None:
         assert "empty description" in desc_check.message
     finally:
         await client.close()
+
+
+@pytest.mark.asyncio
+async def test_tools_custom_args(good_server_cmd: str) -> None:
+    client = HalflistClient()
+    try:
+        await client.connect_stdio(good_server_cmd)
+        await client.initialize()
+
+        suite = ToolsSuite(client, tool_args={"greet": {"name": "CustomUser"}})
+        result = await suite.run()
+
+        assert result.name == "tools"
+        assert result.failed == 0
+        assert result.passed >= 8
+    finally:
+        await client.close()

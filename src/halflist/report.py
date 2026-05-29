@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from typing import Any
 
@@ -191,7 +192,9 @@ class LiveProgress:
         spinner = _SPINNER_FRAMES[self._frame % len(_SPINNER_FRAMES)]
         total_done = sum(len(v) for v in self.checks.values())
         elapsed_total = time.monotonic() - self._start
-        header = Text(f"  {spinner} Running checks... {total_done} completed · {elapsed_total:.1f}s\n")
+        header = Text(
+            f"  {spinner} Running checks... {total_done} completed · {elapsed_total:.1f}s\n"
+        )
         lines: list[Text] = [header]
 
         for name in self.suite_names:
@@ -225,7 +228,11 @@ class LiveProgress:
 
 
 def render_final_report(
-    console: Console, report: HalflistReport, verbose: bool, *, is_filtered: bool = False,
+    console: Console,
+    report: HalflistReport,
+    verbose: bool,
+    *,
+    is_filtered: bool = False,
 ) -> None:
     server_line = "unknown"
     if report.server_info:
@@ -235,7 +242,7 @@ def render_final_report(
         panel_content = (
             f"  Server:     [bold]{server_line}[/bold]\n"
             f"  Transport:  {report.transport}\n"
-            f"  [dim](score suppressed — filtered suite run)[/dim]"
+            f"  [dim](score suppressed - filtered suite run)[/dim]"
         )
     else:
         score = report.score
@@ -275,26 +282,42 @@ def render_final_report(
 
     if is_filtered:
         if report.total_failed > 0:
-            console.print(Panel(
-                "  [bold red]✗  FAIL[/bold red]",
-                border_style="red", expand=False, padding=(0, 1),
-            ))
+            console.print(
+                Panel(
+                    "  [bold red]✗  FAIL[/bold red]",
+                    border_style="red",
+                    expand=False,
+                    padding=(0, 1),
+                )
+            )
         else:
-            console.print(Panel(
-                "  [bold green]✓  PASS[/bold green]",
-                border_style="green", expand=False, padding=(0, 1),
-            ))
+            console.print(
+                Panel(
+                    "  [bold green]✓  PASS[/bold green]",
+                    border_style="green",
+                    expand=False,
+                    padding=(0, 1),
+                )
+            )
     else:
         if report.total_failed > 0:
-            console.print(Panel(
-                f"  [bold red]✗  FAIL[/bold red]   Score: {report.score}/100",
-                border_style="red", expand=False, padding=(0, 1),
-            ))
+            console.print(
+                Panel(
+                    f"  [bold red]✗  FAIL[/bold red]   Score: {report.score}/100",
+                    border_style="red",
+                    expand=False,
+                    padding=(0, 1),
+                )
+            )
         else:
-            console.print(Panel(
-                f"  [bold green]✓  PASS[/bold green]   Score: {report.score}/100",
-                border_style="green", expand=False, padding=(0, 1),
-            ))
+            console.print(
+                Panel(
+                    f"  [bold green]✓  PASS[/bold green]   Score: {report.score}/100",
+                    border_style="green",
+                    expand=False,
+                    padding=(0, 1),
+                )
+            )
     console.print()
 
 
@@ -359,6 +382,10 @@ def _render_check_line(console: Console, check: CheckResult) -> None:
     if check.suite == "security":
         label, label_style = _SECURITY_LABELS.get(check.status, (check.status, "dim"))
         line.append(f" {label}", style=label_style)
+        console.print(line)
+        if check.message and check.status in ("FAIL", "WARN"):
+            for finding in check.message.split("; "):
+                console.print(f"      [dim]→ {finding}[/dim]")
     else:
         detail = ""
         if check.message:
@@ -371,7 +398,7 @@ def _render_check_line(console: Console, check: CheckResult) -> None:
         else:
             line.append(f" {check.status}", style="dim")
 
-    console.print(line)
+        console.print(line)
 
 
 def render_json(report: HalflistReport) -> str:
@@ -411,10 +438,14 @@ class BenchLiveProgress:
     def render(self) -> Group:
         self._frame += 1
         spinner = _SPINNER_FRAMES[self._frame % len(_SPINNER_FRAMES)]
-        done_tools = sum(1 for n in self.tool_names if self.p50s[n] is not None or n in self.skipped)
+        done_tools = sum(
+            1 for n in self.tool_names if self.p50s[n] is not None or n in self.skipped
+        )
         total_tools = len(self.tool_names)
         elapsed_total = time.monotonic() - self._start
-        header = Text(f"  {spinner} Benchmarking {done_tools}/{total_tools} tools · {elapsed_total:.1f}s\n")
+        header = Text(
+            f"  {spinner} Benchmarking {done_tools}/{total_tools} tools · {elapsed_total:.1f}s\n"
+        )
         lines: list[Text] = [header]
 
         for name in self.tool_names:
@@ -492,13 +523,22 @@ def render_bench_report(console: Console, report: BenchReport) -> None:
             skipped_count += 1
             table.add_row(
                 f"[dim]{bm.tool_name}[/dim]",
-                "[dim]skipped (args rejected)[/dim]", "", "", "", "",
+                "[dim]skipped (args rejected)[/dim]",
+                "",
+                "",
+                "",
+                "",
                 "[dim]● skip[/dim]",
             )
         elif bm.errors == bm.iterations:
             benchmarked_count += 1
             table.add_row(
-                bm.tool_name, "[red]all failed[/red]", "", "", "", "",
+                bm.tool_name,
+                "[red]all failed[/red]",
+                "",
+                "",
+                "",
+                "",
                 "[dim red]● error[/dim red]",
             )
         else:
@@ -603,13 +643,22 @@ def render_audit_report(console: Console, report: AuditReport, verbose: bool) ->
                 audit_skipped += 1
                 table.add_row(
                     f"[dim]{bm.tool_name}[/dim]",
-                    "[dim]skipped (args rejected)[/dim]", "", "", "", "",
+                    "[dim]skipped (args rejected)[/dim]",
+                    "",
+                    "",
+                    "",
+                    "",
                     "[dim]● skip[/dim]",
                 )
             elif bm.errors == bm.iterations:
                 audit_benched += 1
                 table.add_row(
-                    bm.tool_name, "[red]all failed[/red]", "", "", "", "",
+                    bm.tool_name,
+                    "[red]all failed[/red]",
+                    "",
+                    "",
+                    "",
+                    "",
                     "[dim red]● error[/dim red]",
                 )
             else:
@@ -641,15 +690,23 @@ def render_audit_report(console: Console, report: AuditReport, verbose: bool) ->
     console.print(f"  Connection: {conn:.0f}ms · Discovery: {disc:.0f}ms · Total: {total:.1f}s")
 
     if report.total_failed > 0:
-        console.print(Panel(
-            f"  [bold red]✗  FAIL[/bold red]   Score: {score}/100",
-            border_style="red", expand=False, padding=(0, 1),
-        ))
+        console.print(
+            Panel(
+                f"  [bold red]✗  FAIL[/bold red]   Score: {score}/100",
+                border_style="red",
+                expand=False,
+                padding=(0, 1),
+            )
+        )
     else:
-        console.print(Panel(
-            f"  [bold green]✓  PASS[/bold green]   Score: {score}/100",
-            border_style="green", expand=False, padding=(0, 1),
-        ))
+        console.print(
+            Panel(
+                f"  [bold green]✓  PASS[/bold green]   Score: {score}/100",
+                border_style="green",
+                expand=False,
+                padding=(0, 1),
+            )
+        )
     console.print()
 
 
@@ -695,7 +752,9 @@ def render_check_markdown(data: dict[str, Any]) -> str:
     total_w = data.get("total_warned", 0)
     total_d = data.get("total_duration_ms", 0) / 1000
     lines.append("")
-    lines.append(f"**Total:** {total_p} passed · {total_f} failed · {total_w} warning · {total_d:.1f}s")
+    lines.append(
+        f"**Total:** {total_p} passed · {total_f} failed · {total_w} warning · {total_d:.1f}s"
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -740,7 +799,9 @@ def render_bench_markdown(data: dict[str, Any]) -> str:
     disc = data.get("discovery_ms", 0)
     total = data.get("total_duration_ms", 0) / 1000
     lines.append("")
-    lines.append(f"**Connection:** {conn:.0f}ms · **Discovery:** {disc:.0f}ms · **Total:** {total:.1f}s")
+    lines.append(
+        f"**Connection:** {conn:.0f}ms · **Discovery:** {disc:.0f}ms · **Total:** {total:.1f}s"
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -804,12 +865,16 @@ def render_audit_markdown(data: dict[str, Any]) -> str:
     disc = data.get("discovery_ms", 0)
     total = data.get("total_duration_ms", 0) / 1000
     lines.append("")
-    lines.append(f"**Connection:** {conn:.0f}ms · **Discovery:** {disc:.0f}ms · **Total:** {total:.1f}s")
+    lines.append(
+        f"**Connection:** {conn:.0f}ms · **Discovery:** {disc:.0f}ms · **Total:** {total:.1f}s"
+    )
     return "\n".join(lines) + "\n"
 
 
 def _html_escape(text: str) -> str:
-    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    return (
+        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    )
 
 
 _HTML_TEMPLATE = """\
@@ -818,7 +883,7 @@ _HTML_TEMPLATE = """\
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>mcp-halflist — {title}</title>
+<title>mcp-halflist - {title}</title>
 <style>
 :root{{
   --bg:#0a0a0a;--surface:#111111;--border:#1a1a1a;
@@ -972,8 +1037,7 @@ def _render_suites_html(suites: list[dict[str, Any]]) -> str:
 
         rule_fill = "━" * max(2, 40 - len(name_upper))
         summary_line = (
-            f'<span class="{rule_cls}">━━ {name_upper} {rule_fill}'
-            f' {passed}/{total} {suffix}</span>'
+            f'<span class="{rule_cls}">━━ {name_upper} {rule_fill} {passed}/{total} {suffix}</span>'
         )
 
         checks_html = ""
@@ -982,7 +1046,8 @@ def _render_suites_html(suites: list[dict[str, Any]]) -> str:
             cname = _html_escape(c["name"])
             if is_security:
                 label, label_cls = _HTML_SECURITY_LABELS.get(
-                    c["status"], (c["status"], "skip"),
+                    c["status"],
+                    (c["status"], "skip"),
                 )
                 msg_html = f'<span class="check-msg {label_cls}">{label}</span>'
             else:
@@ -992,11 +1057,11 @@ def _render_suites_html(suites: list[dict[str, Any]]) -> str:
                 f'<div class="check-row">{icon}'
                 f'<span class="check-name">{cname}</span>'
                 f'<span class="dot-leader"></span>'
-                f'{msg_html}</div>\n'
+                f"{msg_html}</div>\n"
             )
 
         parts.append(
-            f'<details><summary>{summary_line}</summary>\n'
+            f"<details><summary>{summary_line}</summary>\n"
             f'<div class="check-list">{checks_html}</div></details>\n'
         )
     return "".join(parts)
@@ -1043,7 +1108,8 @@ def _render_bench_table_html(benchmarks: list[dict[str, Any]]) -> str:
     return (
         "<table><thead><tr><th>Tool</th><th>p50</th><th>p95</th><th>p99</th>"
         "<th>min</th><th>max</th><th>p99 bar</th></tr></thead><tbody>\n"
-        + rows + "</tbody></table>\n"
+        + rows
+        + "</tbody></table>\n"
     )
 
 
@@ -1066,14 +1132,14 @@ def render_check_html(data: dict[str, Any]) -> str:
     body += f'<div class="meta-item"><span class="meta-label">Passed:</span> <span class="meta-value pass">{data.get("total_passed", 0)}</span></div>'
     body += f'<div class="meta-item"><span class="meta-label">Failed:</span> <span class="meta-value fail">{data.get("total_failed", 0)}</span></div>'
     body += f'<div class="meta-item"><span class="meta-label">Warnings:</span> <span class="meta-value warn">{data.get("total_warned", 0)}</span></div>'
-    body += '</div></div>\n'
+    body += "</div></div>\n"
 
     body += '<div class="card"><h2>Suites</h2>\n'
     body += _render_suites_html(data.get("suites", []))
-    body += '</div>\n'
+    body += "</div>\n"
 
     return _HTML_TEMPLATE.format(
-        title=f"{name} — Conformance",
+        title=f"{name} - Conformance",
         body=body,
         version=data.get("version", "?"),
         nav_css="",
@@ -1094,14 +1160,14 @@ def render_bench_html(data: dict[str, Any]) -> str:
     body += f'<div class="meta-item"><span class="meta-label">Iterations:</span> <span class="meta-value">{data.get("iterations", 0)}</span></div>'
     body += f'<div class="meta-item"><span class="meta-label">Connection:</span> <span class="meta-value">{data.get("connection_ms", 0):.0f}ms</span></div>'
     body += f'<div class="meta-item"><span class="meta-label">Total:</span> <span class="meta-value">{total_dur:.1f}s</span></div>'
-    body += '</div></div>\n'
+    body += "</div></div>\n"
 
     body += '<div class="card"><h2>Latency per Tool</h2>\n'
     body += _render_bench_table_html(data.get("benchmarks", []))
-    body += '</div>\n'
+    body += "</div>\n"
 
     return _HTML_TEMPLATE.format(
-        title=f"{name} — Benchmark",
+        title=f"{name} - Benchmark",
         body=body,
         version=data.get("version", "?"),
         nav_css="",
@@ -1130,25 +1196,25 @@ def render_audit_html(data: dict[str, Any]) -> str:
     body += f'<div class="meta-item"><span class="meta-label">Warnings:</span> <span class="meta-value warn">{data.get("total_warned", 0)}</span></div>'
     body += f'<div class="meta-item"><span class="meta-label">Tools:</span> <span class="meta-value">{data.get("benchmarked_count", 0)} of {data.get("tool_count", 0)}</span></div>'
     body += f'<div class="meta-item"><span class="meta-label">Iterations:</span> <span class="meta-value">{data.get("iterations", 0)}</span></div>'
-    body += '</div></div>\n'
+    body += "</div></div>\n"
 
     body += '<div class="card" id="conformance"><h2>Conformance</h2>\n'
     body += _render_suites_html(data.get("suites", []))
-    body += '</div>\n'
+    body += "</div>\n"
 
     has_bench = bool(data.get("benchmarks"))
     if has_bench:
         body += '<div class="card" id="latency"><h2>Latency per Tool</h2>\n'
         body += _render_bench_table_html(data.get("benchmarks", []))
-        body += '</div>\n'
+        body += "</div>\n"
 
     nav_css = (
-        '.topnav{position:fixed;top:0;left:0;right:0;background:var(--bg);border-bottom:1px solid var(--border);'
-        'padding:.5rem 1rem;z-index:1000;display:flex;align-items:center;gap:1.5rem;font-family:var(--font-mono);font-size:.8rem}'
-        '.topnav .nav-brand{color:var(--green);font-weight:700}'
-        '.topnav a{color:var(--green-dim);text-decoration:none;text-transform:uppercase;letter-spacing:.05em}'
-        '.topnav a:hover{color:var(--green)}'
-        'body{padding-top:3.5rem}'
+        ".topnav{position:fixed;top:0;left:0;right:0;background:var(--bg);border-bottom:1px solid var(--border);"
+        "padding:.5rem 1rem;z-index:1000;display:flex;align-items:center;gap:1.5rem;font-family:var(--font-mono);font-size:.8rem}"
+        ".topnav .nav-brand{color:var(--green);font-weight:700}"
+        ".topnav a{color:var(--green-dim);text-decoration:none;text-transform:uppercase;letter-spacing:.05em}"
+        ".topnav a:hover{color:var(--green)}"
+        "body{padding-top:3.5rem}"
     )
     nav_links = '<a href="#conformance">Conformance</a>'
     if has_bench:
@@ -1156,7 +1222,7 @@ def render_audit_html(data: dict[str, Any]) -> str:
     nav_html = f'<nav class="topnav"><span class="nav-brand">halflist</span>{nav_links}</nav>'
 
     return _HTML_TEMPLATE.format(
-        title=f"{name} — Audit",
+        title=f"{name} - Audit",
         body=body,
         version=data.get("version", "?"),
         nav_css=nav_css,
@@ -1246,3 +1312,195 @@ def render_badge_svg(data: dict[str, Any]) -> str:
         value=value,
         color=color,
     )
+
+
+# ---------------------------------------------------------------------------
+# JUnit XML generation
+# ---------------------------------------------------------------------------
+
+
+def _junit_suites_elements(suites: list[dict[str, Any]]) -> list[ET.Element]:
+    elements = []
+    for suite in suites:
+        suite_name = suite.get("name", "unknown")
+        checks = suite.get("checks", [])
+        failures = 0
+        skipped = 0
+        for c in checks:
+            st = c.get("status", "PASS")
+            if st in ("FAIL", "WARN"):
+                failures += 1
+            elif st == "SKIP":
+                skipped += 1
+
+        ts_el = ET.Element(
+            "testsuite",
+            name=suite_name,
+            tests=str(len(checks)),
+            failures=str(failures),
+            errors="0",
+            skipped=str(skipped),
+            time=f"{suite.get('duration_ms', 0) / 1000:.3f}",
+        )
+
+        for c in checks:
+            tc = ET.SubElement(
+                ts_el,
+                "testcase",
+                classname=f"halflist.{suite_name}",
+                name=c.get("name", ""),
+                time=f"{c.get('duration_ms', 0) / 1000:.3f}",
+            )
+            status = c.get("status", "PASS")
+            msg = c.get("message") or ""
+            if status == "FAIL":
+                ET.SubElement(tc, "failure", message=msg, type="FAIL")
+            elif status == "WARN":
+                ET.SubElement(tc, "failure", message=msg, type="WARN")
+            elif status == "SKIP":
+                ET.SubElement(tc, "skipped", message=msg)
+
+        elements.append(ts_el)
+    return elements
+
+
+def _junit_bench_element(benchmarks: list[dict[str, Any]]) -> ET.Element:
+    failures = 0
+    skipped_count = 0
+    total_time = 0.0
+
+    for b in benchmarks:
+        if b.get("skipped"):
+            skipped_count += 1
+        elif b.get("errors", 0) > 0:
+            failures += 1
+        total_time += b.get("mean_ms", 0) / 1000
+
+    ts_el = ET.Element(
+        "testsuite",
+        name="benchmarks",
+        tests=str(len(benchmarks)),
+        failures=str(failures),
+        errors="0",
+        skipped=str(skipped_count),
+        time=f"{total_time:.3f}",
+    )
+
+    for b in benchmarks:
+        tool_name = b.get("tool_name", "unknown")
+        tc = ET.SubElement(
+            ts_el,
+            "testcase",
+            classname="halflist.bench",
+            name=tool_name,
+            time=f"{b.get('mean_ms', 0) / 1000:.3f}",
+        )
+
+        if b.get("skipped"):
+            reason = b.get("skip_reason") or "skipped"
+            ET.SubElement(tc, "skipped", message=reason)
+        elif b.get("errors", 0) > 0:
+            err_count = b["errors"]
+            iters = b.get("iterations", 0)
+            ET.SubElement(tc, "failure", message=f"{err_count}/{iters} calls failed", type="ERROR")
+        else:
+            props = ET.SubElement(tc, "properties")
+            ET.SubElement(props, "property", name="p50_ms", value=str(round(b.get("median_ms", 0))))
+            ET.SubElement(props, "property", name="p95_ms", value=str(round(b.get("p95_ms", 0))))
+            ET.SubElement(props, "property", name="p99_ms", value=str(round(b.get("p99_ms", 0))))
+            ET.SubElement(props, "property", name="iterations", value=str(b.get("iterations", 0)))
+
+    return ts_el
+
+
+def render_check_junit(data: dict[str, Any]) -> str:
+    suites = data.get("suites", [])
+    total_tests = 0
+    total_failures = 0
+    total_skipped = 0
+
+    suite_elements = _junit_suites_elements(suites)
+    for ts_el in suite_elements:
+        total_tests += int(ts_el.get("tests", "0"))
+        total_failures += int(ts_el.get("failures", "0"))
+        total_skipped += int(ts_el.get("skipped", "0"))
+
+    root = ET.Element(
+        "testsuites",
+        name="halflist",
+        tests=str(total_tests),
+        failures=str(total_failures),
+        errors="0",
+        skipped=str(total_skipped),
+        time=f"{data.get('total_duration_ms', 0) / 1000:.3f}",
+        timestamp=data.get("timestamp", ""),
+    )
+    for el in suite_elements:
+        root.append(el)
+
+    ET.indent(root)
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding="unicode")
+
+
+def render_bench_junit(data: dict[str, Any]) -> str:
+    benchmarks = data.get("benchmarks", [])
+    bench_el = _junit_bench_element(benchmarks)
+
+    total_tests = int(bench_el.get("tests", "0"))
+    total_failures = int(bench_el.get("failures", "0"))
+    total_skipped = int(bench_el.get("skipped", "0"))
+
+    root = ET.Element(
+        "testsuites",
+        name="halflist",
+        tests=str(total_tests),
+        failures=str(total_failures),
+        errors="0",
+        skipped=str(total_skipped),
+        time=f"{data.get('total_duration_ms', 0) / 1000:.3f}",
+        timestamp=data.get("timestamp", ""),
+    )
+    root.append(bench_el)
+
+    ET.indent(root)
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding="unicode")
+
+
+def render_audit_junit(data: dict[str, Any]) -> str:
+    suites = data.get("suites", [])
+    benchmarks = data.get("benchmarks", [])
+
+    suite_elements = _junit_suites_elements(suites)
+    bench_el = _junit_bench_element(benchmarks) if benchmarks else None
+
+    total_tests = 0
+    total_failures = 0
+    total_skipped = 0
+
+    for ts_el in suite_elements:
+        total_tests += int(ts_el.get("tests", "0"))
+        total_failures += int(ts_el.get("failures", "0"))
+        total_skipped += int(ts_el.get("skipped", "0"))
+
+    if bench_el is not None:
+        total_tests += int(bench_el.get("tests", "0"))
+        total_failures += int(bench_el.get("failures", "0"))
+        total_skipped += int(bench_el.get("skipped", "0"))
+
+    root = ET.Element(
+        "testsuites",
+        name="halflist",
+        tests=str(total_tests),
+        failures=str(total_failures),
+        errors="0",
+        skipped=str(total_skipped),
+        time=f"{data.get('total_duration_ms', 0) / 1000:.3f}",
+        timestamp=data.get("timestamp", ""),
+    )
+    for el in suite_elements:
+        root.append(el)
+    if bench_el is not None:
+        root.append(bench_el)
+
+    ET.indent(root)
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding="unicode")

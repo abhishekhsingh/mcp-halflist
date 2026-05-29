@@ -11,17 +11,23 @@ def _make_tool(name: str, description: str | None = "A tool") -> MagicMock:
     tool = MagicMock()
     tool.name = name
     tool.description = description
-    tool.inputSchema = {"type": "object", "properties": {"x": {"type": "string"}}, "required": ["x"]}
+    tool.inputSchema = {
+        "type": "object",
+        "properties": {"x": {"type": "string"}},
+        "required": ["x"],
+    }
     return tool
 
 
 @pytest.mark.asyncio
 async def test_absent_description_produces_warn() -> None:
     client = MagicMock()
-    client.list_tools = AsyncMock(return_value=[
-        _make_tool("tool_a", description=None),
-        _make_tool("tool_b", description="Good desc"),
-    ])
+    client.list_tools = AsyncMock(
+        return_value=[
+            _make_tool("tool_a", description=None),
+            _make_tool("tool_b", description="Good desc"),
+        ]
+    )
     call_result = MagicMock()
     call_result.content = [MagicMock(type="text")]
     call_result.isError = False
@@ -39,10 +45,12 @@ async def test_absent_description_produces_warn() -> None:
 @pytest.mark.asyncio
 async def test_empty_description_produces_warn() -> None:
     client = MagicMock()
-    client.list_tools = AsyncMock(return_value=[
-        _make_tool("tool_a", description=""),
-        _make_tool("tool_b", description="Good desc"),
-    ])
+    client.list_tools = AsyncMock(
+        return_value=[
+            _make_tool("tool_a", description=""),
+            _make_tool("tool_b", description="Good desc"),
+        ]
+    )
     call_result = MagicMock()
     call_result.content = [MagicMock(type="text")]
     call_result.isError = False
@@ -60,11 +68,13 @@ async def test_empty_description_produces_warn() -> None:
 @pytest.mark.asyncio
 async def test_both_absent_and_empty_description() -> None:
     client = MagicMock()
-    client.list_tools = AsyncMock(return_value=[
-        _make_tool("absent_tool", description=None),
-        _make_tool("empty_tool", description=""),
-        _make_tool("good_tool", description="Has description"),
-    ])
+    client.list_tools = AsyncMock(
+        return_value=[
+            _make_tool("absent_tool", description=None),
+            _make_tool("empty_tool", description=""),
+            _make_tool("good_tool", description="Has description"),
+        ]
+    )
     call_result = MagicMock()
     call_result.content = [MagicMock(type="text")]
     call_result.isError = False
@@ -84,10 +94,12 @@ async def test_both_absent_and_empty_description() -> None:
 @pytest.mark.asyncio
 async def test_all_have_descriptions_passes() -> None:
     client = MagicMock()
-    client.list_tools = AsyncMock(return_value=[
-        _make_tool("tool_a", description="Desc A"),
-        _make_tool("tool_b", description="Desc B"),
-    ])
+    client.list_tools = AsyncMock(
+        return_value=[
+            _make_tool("tool_a", description="Desc A"),
+            _make_tool("tool_b", description="Desc B"),
+        ]
+    )
     call_result = MagicMock()
     call_result.content = [MagicMock(type="text")]
     call_result.isError = False

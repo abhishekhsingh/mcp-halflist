@@ -41,7 +41,9 @@ class HandshakeSuite(CheckSuite):
                 f"{result.serverInfo.name} v{result.serverInfo.version}",
             )
         else:
-            self.record("Server info has name and version", "FAIL", "Missing or incomplete serverInfo")
+            self.record(
+                "Server info has name and version", "FAIL", "Missing or incomplete serverInfo"
+            )
 
         try:
             from mcp.types import InitializedNotification

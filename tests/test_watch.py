@@ -40,7 +40,9 @@ async def test_watch_two_probes() -> None:
 
 @pytest.mark.asyncio
 async def test_watch_bad_server_down() -> None:
-    probe = await run_probe(stdio="nonexistent_binary_that_does_not_exist_xyz", quiet=True, timeout=5)
+    probe = await run_probe(
+        stdio="nonexistent_binary_that_does_not_exist_xyz", quiet=True, timeout=5
+    )
     assert probe.status == "down"
     assert probe.error is not None
     assert probe.probe_duration_ms > 0

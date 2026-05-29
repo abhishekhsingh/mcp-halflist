@@ -1,5 +1,6 @@
 import http.server
 import json
+import re
 import sys
 import threading
 import urllib.parse
@@ -8,6 +9,12 @@ from pathlib import Path
 import pytest
 
 SERVERS_DIR = Path(__file__).parent / "servers"
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]|\x1b\([A-Za-z]")
+
+
+def strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub("", text)
 
 
 @pytest.fixture

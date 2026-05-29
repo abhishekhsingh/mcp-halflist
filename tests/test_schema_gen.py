@@ -22,7 +22,10 @@ def test_boolean_type():
 
 
 def test_string_with_enum():
-    schema = {"type": "object", "properties": {"color": {"type": "string", "enum": ["red", "blue"]}}}
+    schema = {
+        "type": "object",
+        "properties": {"color": {"type": "string", "enum": ["red", "blue"]}},
+    }
     assert generate_args(schema) == {"color": "red"}
 
 

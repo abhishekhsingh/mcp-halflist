@@ -5,6 +5,7 @@ mcp = FastMCP("full-test-server")
 
 # ── Tools ────────────────────────────────────────────────────────────────────
 
+
 @mcp.tool()
 def greet(name: str) -> str:
     """Greet someone by name."""
@@ -19,6 +20,7 @@ def add(a: int, b: int) -> str:
 
 # ── Resources ────────────────────────────────────────────────────────────────
 
+
 @mcp.resource("resource://config")
 def get_config() -> str:
     """Application configuration."""
@@ -32,6 +34,7 @@ def get_readme() -> str:
 
 
 # ── Prompts ──────────────────────────────────────────────────────────────────
+
 
 @mcp.prompt()
 def summarize(text: str) -> str:

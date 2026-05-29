@@ -1,0 +1,53 @@
+[server]
+transport = "stdio"
+command = "python3 my_server.py"
+
+[server.oauth]
+token_url = "https://auth.example.com/token"
+client_id = "test-client"
+client_secret = "test-secret"
+scope = "read write"
+
+[server.pkce]
+no_browser = true
+callback_port = 3035
+
+[check]
+suites = ["security", "tools"]
+timeout = 45
+verbose = true
+verify_pins = true
+args_file = "check-args.json"
+
+[bench]
+iterations = 20
+warmup = 5
+tools = ["echo", "add"]
+all = false
+timeout = 60
+args_file = "args.json"
+
+[audit]
+timeout = 90
+verify_pins = true
+args_file = "audit-args.json"
+
+[watch]
+interval = 120
+count = 10
+log = "watch.jsonl"
+timeout = 30
+
+[pin]
+timeout = 30
+
+[report]
+format = "html"
+
+[output]
+format = "json"
+quiet = true
+
+[debug]
+enabled = true
+log_file = "debug.log"

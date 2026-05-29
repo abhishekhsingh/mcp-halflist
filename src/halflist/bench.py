@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import statistics
 import time
-from typing import Callable
+from typing import Any, Callable
 
 from mcp import types
 
@@ -17,16 +18,25 @@ async def bench_tool(
     iterations: int,
     warmup: int,
     on_call: Callable[[int], None] | None = None,
+    *,
+    call_timeout: float | None = None,
+    custom_args: dict[str, Any] | None = None,
 ) -> ToolBenchmark:
-    args = generate_args(tool.inputSchema)
+    args = custom_args if custom_args is not None else generate_args(tool.inputSchema)
     errors = 0
 
     warmup_failures = 0
     for _ in range(warmup):
         try:
-            result = await client.call_tool(tool.name, args)
+            coro = client.call_tool(tool.name, args)
+            if call_timeout is not None:
+                result = await asyncio.wait_for(coro, timeout=call_timeout)
+            else:
+                result = await coro
             if getattr(result, "isError", False):
                 warmup_failures += 1
+        except (asyncio.TimeoutError, TimeoutError):
+            warmup_failures += 1
         except Exception:
             warmup_failures += 1
 
@@ -34,8 +44,13 @@ async def bench_tool(
         return ToolBenchmark(
             tool_name=tool.name,
             iterations=0,
-            min_ms=0, max_ms=0, mean_ms=0, median_ms=0,
-            p95_ms=0, p99_ms=0, errors=0,
+            min_ms=0,
+            max_ms=0,
+            mean_ms=0,
+            median_ms=0,
+            p95_ms=0,
+            p99_ms=0,
+            errors=0,
             skipped=True,
             skip_reason="all warmup calls failed",
         )
@@ -44,10 +59,18 @@ async def bench_tool(
     for i in range(iterations):
         start = time.monotonic()
         try:
-            result = await client.call_tool(tool.name, args)
+            coro = client.call_tool(tool.name, args)
+            if call_timeout is not None:
+                result = await asyncio.wait_for(coro, timeout=call_timeout)
+            else:
+                result = await coro
             elapsed = (time.monotonic() - start) * 1000
             if getattr(result, "isError", False):
                 errors += 1
+            latencies.append(elapsed)
+        except (asyncio.TimeoutError, TimeoutError):
+            elapsed = (time.monotonic() - start) * 1000
+            errors += 1
             latencies.append(elapsed)
         except Exception:
             elapsed = (time.monotonic() - start) * 1000
@@ -60,8 +83,13 @@ async def bench_tool(
         return ToolBenchmark(
             tool_name=tool.name,
             iterations=iterations,
-            min_ms=0, max_ms=0, mean_ms=0, median_ms=0,
-            p95_ms=0, p99_ms=0, errors=errors,
+            min_ms=0,
+            max_ms=0,
+            mean_ms=0,
+            median_ms=0,
+            p95_ms=0,
+            p99_ms=0,
+            errors=errors,
         )
 
     raw_latencies = [round(v, 2) for v in latencies]

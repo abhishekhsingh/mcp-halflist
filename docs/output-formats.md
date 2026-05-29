@@ -8,9 +8,9 @@ All commands default to rich, colored terminal output.
 
 ### Three-Phase UX
 
-1. **Connection** — spinner while connecting, then server name, version, and tool count
-2. **Progress** — live-updating display showing check/benchmark progress with status symbols
-3. **Report** — final scored report with suite breakdown
+1. **Connection**: spinner while connecting, then server name, version, and tool count
+2. **Progress**: live-updating display showing check/benchmark progress with status symbols
+3. **Report**: final scored report with suite breakdown
 
 ### Compact vs Verbose
 
@@ -31,6 +31,15 @@ security ───────────────────────�
   ✓ Cross-tool manipulation ················· PASS
   ✓ Suspicious encoding ····················· PASS
   — Tool pin verification ··················· Pin verification not requested
+```
+
+Security checks that fail or warn expand their findings with `→` prefixed lines:
+
+```
+  ⚠ Prompt injection scan ··················· WARN
+      → my_tool: Description length 2500 chars (limit: 2000)
+  ✗ Data exfiltration references ············ THREAT DETECTED
+      → my_tool: references sensitive path ~/.ssh - matched '~/.ssh'
 ```
 
 ### Status Symbols
@@ -140,15 +149,15 @@ halflist report results.json --format html -o report.html
 
 ### Features
 
-- **Terminal aesthetic** — green-on-black theme (`#0a0a0a` background, `#00ff41` accent), monospace throughout
-- **Scan line animation** — subtle CRT-style effect across the page
-- **SVG donut gauge** — visual score indicator with green/yellow/red coloring (check and audit reports)
-- **Collapsible suites** — CSS-only `<details>/<summary>`, no JavaScript
-- **Per-check details** — status icon, check name, and message for every check
-- **Benchmark bar charts** — horizontal bars colored by latency (green/yellow/red)
-- **Fixed navigation** — audit reports have a sticky top nav linking to conformance and latency sections
-- **Print styles** — clean black-on-white for printing, animations disabled
-- **Inline CSS** — everything in one file, works offline, no CDN dependencies
+- **Terminal aesthetic**: green-on-black theme (`#0a0a0a` background, `#00ff41` accent), monospace throughout
+- **Scan line animation**: subtle CRT-style effect across the page
+- **SVG donut gauge**: visual score indicator with green/yellow/red coloring (check and audit reports)
+- **Collapsible suites**: CSS-only `<details>/<summary>`, no JavaScript
+- **Per-check details**: status icon, check name, and message for every check
+- **Benchmark bar charts**: horizontal bars colored by latency (green/yellow/red)
+- **Fixed navigation**: audit reports have a sticky top nav linking to conformance and latency sections
+- **Print styles**: clean black-on-white for printing, animations disabled
+- **Inline CSS**: everything in one file, works offline, no CDN dependencies
 
 Skipped benchmark tools appear as a dim, italic row spanning the full table.
 
@@ -167,8 +176,8 @@ Shields.io-style SVG badge for embedding in README files.
 halflist report results.json --badge -o badge.svg
 ```
 
-- **Check/audit reports** — shows score (e.g., `MCP | 98/100`), colored green/yellow/red
-- **Bench reports** — shows tool count and average p50 (e.g., `MCP bench | 5 tools · p50 avg 12ms`)
+- **Check/audit reports**: shows score (e.g., `MCP | 98/100`), colored green/yellow/red
+- **Bench reports**: shows tool count and average p50 (e.g., `MCP bench | 5 tools · p50 avg 12ms`)
 
 ### Embedding in README
 

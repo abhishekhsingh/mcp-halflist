@@ -18,7 +18,9 @@ async def test_handshake_good_server(good_server_cmd: str) -> None:
         assert len(result.checks) == 6
 
         for check in result.checks:
-            assert check.status in ("PASS", "WARN"), f"{check.name}: {check.status} - {check.message}"
+            assert check.status in ("PASS", "WARN"), (
+                f"{check.name}: {check.status} - {check.message}"
+            )
 
         assert result.passed >= 5
     finally:

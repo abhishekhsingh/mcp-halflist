@@ -4,13 +4,14 @@ CI-first conformance, security, and benchmarking CLI for MCP servers.
 
 **Lint your MCP server before your users do.**
 
+[![CI](https://github.com/abhishekhsingh/mcp-halflist/actions/workflows/ci.yml/badge.svg)](https://github.com/abhishekhsingh/mcp-halflist/actions/workflows/ci.yml)
 ![PyPI](https://img.shields.io/pypi/v/mcp-halflist)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Python](https://img.shields.io/pypi/pyversions/mcp-halflist)
 
 ## What It Does
 
-Point it at any [MCP](https://modelcontextprotocol.io) server — stdio or HTTP — and get a scored conformance report, security vulnerability scan (prompt injection, tool poisoning, data exfiltration), and per-tool latency benchmarks. Fully offline, zero API keys, CI-native. One `pip install`, one command, done.
+Point it at any [MCP](https://modelcontextprotocol.io) server (stdio or HTTP) and get a scored conformance report, security vulnerability scan (prompt injection, tool poisoning, data exfiltration), and per-tool latency benchmarks. Fully offline, zero API keys, CI-native. One `pip install`, one command, done.
 
 ## See It In Action
 
@@ -63,9 +64,32 @@ halflist audit --http https://mcp.example.com/v1 \
   --oauth-client-id my-client \
   --oauth-client-secret my-secret
 
+# OAuth2 PKCE (automatic on 401, opens browser for authorization)
+halflist check --http https://mcp.example.com/v1
+
+# OAuth2 PKCE headless mode (prints URL instead of opening browser)
+halflist check --http https://mcp.example.com/v1 --no-browser
+
+# Skip automatic OAuth PKCE
+halflist check --http https://mcp.example.com/v1 --no-auth
+
+# Custom tool arguments for tools that need specific inputs
+# args.json: {"get_user": {"user_id": "abc123"}}
+halflist bench --http http://localhost:8080/mcp --tool get_user --args-file args.json
+
 # More real servers to try
 halflist check --stdio "npx -y @modelcontextprotocol/server-time"
 halflist check --stdio "npx -y @modelcontextprotocol/server-filesystem /tmp"
+```
+
+## CI Integration
+
+JUnit XML output works with GitHub Actions, GitLab CI, Jenkins, and any CI system that supports JUnit test reporters:
+
+```bash
+# Generate JUnit XML for CI test reporters
+halflist check --stdio "python3 server.py" --format junit -o results.xml
+halflist audit --stdio "python3 server.py" --format junit -o audit.xml
 ```
 
 ## Commands
@@ -83,13 +107,59 @@ See the [full command reference](https://github.com/abhishekhsingh/mcp-halflist/
 
 ## Security Scanning
 
-halflist scans tool descriptions for prompt injection, data exfiltration instructions, cross-tool manipulation, suspicious encoding (base64, zero-width characters), and rug pull attempts via tool pinning. All scanning is fully offline — zero API calls, zero data sharing. Unlike [mcp-scan](https://github.com/invariantlabs-ai/mcp-scan) which sends tool descriptions to an external API, halflist runs entirely on your machine.
+halflist scans tool descriptions for prompt injection, data exfiltration instructions, cross-tool manipulation, suspicious encoding (base64, zero-width characters), and rug pull attempts via tool pinning. All scanning runs locally: zero API calls, zero data sharing. Unlike [mcp-scan](https://github.com/invariantlabs-ai/mcp-scan) which sends tool descriptions to an external API, halflist runs entirely on your machine.
 
 See [security scanning details](https://github.com/abhishekhsingh/mcp-halflist/blob/main/docs/security.md) for the full list of detection patterns.
 
+## Debug Logging
+
+```bash
+# Enable debug output
+halflist check --stdio "python3 server.py" --debug
+
+# Save debug log to file
+halflist audit --http https://example.com/mcp --debug-log debug.log
+
+# Environment variable (useful in CI)
+HALFLIST_LOG_LEVEL=DEBUG halflist audit --stdio "python3 server.py"
+```
+
+## Configuration
+
+Create a `halflist.toml` in your project root:
+
+```toml
+[server]
+transport = "stdio"
+command = "python3 my_server.py"
+
+[check]
+timeout = 30
+
+[bench]
+iterations = 20
+args_file = "args.json"
+```
+
+Then just run:
+
+```bash
+halflist check
+halflist audit
+```
+
+CLI flags override config values. Use `${ENV_VAR}` for secrets:
+
+```toml
+[server.oauth]
+client_secret = "${MCP_CLIENT_SECRET}"
+```
+
+Config file discovery order: `halflist.toml` (cwd) > `.halflist.toml` (cwd) > `~/.halflist/config.toml`. Or pass `--config path/to/file.toml` explicitly.
+
 ## Output Formats
 
-Terminal (colored, default) · JSON (`--format json`) · Markdown · HTML · SVG Badge
+Terminal (colored, default) · JSON (`--format json`) · JUnit XML (`--format junit`) · Markdown · HTML · SVG Badge
 
 See the [output format reference](https://github.com/abhishekhsingh/mcp-halflist/blob/main/docs/output-formats.md) for details.
 
@@ -102,6 +172,17 @@ See the [output format reference](https://github.com/abhishekhsingh/mcp-halflist
 | [mcp-server-tester](https://github.com/apify/mcp-server-tester) | LLM-generated tests | Yes (Anthropic) | Yes |
 | [mcp-scan](https://github.com/invariantlabs-ai/mcp-scan) | Security scanning | Yes (OpenAI for local) | Yes (Invariant API) |
 | **mcp-halflist** | **CI-first check + security + bench** | **No** | **No** |
+
+## Development
+
+```bash
+git clone https://github.com/abhishekhsingh/mcp-halflist.git
+cd mcp-halflist
+pip install -e ".[dev]"
+ruff check src/ tests/
+ruff format --check src/ tests/
+pytest -v --tb=short
+```
 
 ## License
 

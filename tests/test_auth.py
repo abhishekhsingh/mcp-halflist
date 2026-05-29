@@ -108,11 +108,14 @@ async def test_fetch_oauth_token_real_server_bad_grant(oauth_server: dict[str, s
     import httpx
 
     async with httpx.AsyncClient() as client:
-        resp = await client.post(oauth_server["url"], data={
-            "grant_type": "authorization_code",
-            "client_id": "c",
-            "client_secret": "s",
-        })
+        resp = await client.post(
+            oauth_server["url"],
+            data={
+                "grant_type": "authorization_code",
+                "client_id": "c",
+                "client_secret": "s",
+            },
+        )
     assert resp.status_code == 400
     assert resp.json()["error"] == "unsupported_grant_type"
 
@@ -131,10 +134,17 @@ async def test_fetch_oauth_token_real_server_missing_creds(oauth_server: dict[st
 
 def test_cli_check_full_server() -> None:
     cmd = f"{sys.executable} {SERVERS_DIR / 'full_server.py'}"
-    result = runner.invoke(app, [
-        "check", "--stdio", cmd,
-        "--format", "json", "-q",
-    ])
+    result = runner.invoke(
+        app,
+        [
+            "check",
+            "--stdio",
+            cmd,
+            "--format",
+            "json",
+            "-q",
+        ],
+    )
     assert result.exit_code == 0
     report = json.loads(result.output)
     assert report["total_failed"] == 0

@@ -11,7 +11,11 @@ class ResourcesSuite(CheckSuite):
         start = self.measure()
 
         if not self.client.has_capability("resources"):
-            self.record("resources/list returns valid array", "SKIP", "Server does not advertise resources capability")
+            self.record(
+                "resources/list returns valid array",
+                "SKIP",
+                "Server does not advertise resources capability",
+            )
             return self.build_result((self.measure() - start) * 1000)
 
         try:
@@ -44,7 +48,9 @@ class ResourcesSuite(CheckSuite):
             if not getattr(r, "name", None):
                 missing_name.append(str(r.uri))
         if missing_name:
-            self.record("Every resource has name", "WARN", f"Missing name: {', '.join(missing_name[:3])}")
+            self.record(
+                "Every resource has name", "WARN", f"Missing name: {', '.join(missing_name[:3])}"
+            )
         else:
             self.record("Every resource has name", "PASS")
 
@@ -55,7 +61,9 @@ class ResourcesSuite(CheckSuite):
             read_result = await self.client.read_resource(str(first.uri))
             dur = (self.measure() - t0) * 1000
         except Exception as e:
-            self.record("resources/read returns valid content", "FAIL", f"Error reading {first.uri}: {e}")
+            self.record(
+                "resources/read returns valid content", "FAIL", f"Error reading {first.uri}: {e}"
+            )
             return self.build_result((self.measure() - start) * 1000)
 
         contents = read_result.contents
@@ -63,7 +71,9 @@ class ResourcesSuite(CheckSuite):
             self.record("resources/read returns valid content", "FAIL", "Empty contents array")
             return self.build_result((self.measure() - start) * 1000)
 
-        self.record("resources/read returns valid content", "PASS", f"{len(contents)} items, {dur:.0f}ms")
+        self.record(
+            "resources/read returns valid content", "PASS", f"{len(contents)} items, {dur:.0f}ms"
+        )
 
         # Check each content item has uri
         missing_content_uri: list[int] = []
@@ -71,7 +81,9 @@ class ResourcesSuite(CheckSuite):
             if not getattr(c, "uri", None):
                 missing_content_uri.append(i)
         if missing_content_uri:
-            self.record("Each content item has uri", "FAIL", f"Missing uri at index: {missing_content_uri}")
+            self.record(
+                "Each content item has uri", "FAIL", f"Missing uri at index: {missing_content_uri}"
+            )
         else:
             self.record("Each content item has uri", "PASS")
 
@@ -83,7 +95,9 @@ class ResourcesSuite(CheckSuite):
             if not has_text and not has_blob:
                 missing_content.append(i)
         if missing_content:
-            self.record("Each content item has text or blob", "FAIL", f"Missing at index: {missing_content}")
+            self.record(
+                "Each content item has text or blob", "FAIL", f"Missing at index: {missing_content}"
+            )
         else:
             self.record("Each content item has text or blob", "PASS")
 

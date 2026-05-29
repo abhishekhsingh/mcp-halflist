@@ -11,7 +11,11 @@ class PromptsSuite(CheckSuite):
         start = self.measure()
 
         if not self.client.has_capability("prompts"):
-            self.record("prompts/list returns valid array", "SKIP", "Server does not advertise prompts capability")
+            self.record(
+                "prompts/list returns valid array",
+                "SKIP",
+                "Server does not advertise prompts capability",
+            )
             return self.build_result((self.measure() - start) * 1000)
 
         try:
@@ -44,7 +48,11 @@ class PromptsSuite(CheckSuite):
             if not getattr(p, "description", None):
                 missing_desc.append(p.name or "?")
         if missing_desc:
-            self.record("Every prompt has description", "WARN", f"Missing description: {', '.join(missing_desc[:3])}")
+            self.record(
+                "Every prompt has description",
+                "WARN",
+                f"Missing description: {', '.join(missing_desc[:3])}",
+            )
         else:
             self.record("Every prompt has description", "PASS")
 
@@ -67,7 +75,9 @@ class PromptsSuite(CheckSuite):
             self.record("prompts/get returns valid messages", "FAIL", "Empty messages array")
             return self.build_result((self.measure() - start) * 1000)
 
-        self.record("prompts/get returns valid messages", "PASS", f"{len(messages)} messages, {dur:.0f}ms")
+        self.record(
+            "prompts/get returns valid messages", "PASS", f"{len(messages)} messages, {dur:.0f}ms"
+        )
 
         # Check each message has role
         missing_role: list[int] = []
@@ -85,7 +95,9 @@ class PromptsSuite(CheckSuite):
             if getattr(m, "content", None) is None:
                 missing_content.append(i)
         if missing_content:
-            self.record("Each message has content", "FAIL", f"Missing content at index: {missing_content}")
+            self.record(
+                "Each message has content", "FAIL", f"Missing content at index: {missing_content}"
+            )
         else:
             self.record("Each message has content", "PASS")
 

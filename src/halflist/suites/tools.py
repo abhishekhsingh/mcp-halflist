@@ -1,15 +1,27 @@
 from __future__ import annotations
 
 import re
+from typing import Any, Callable
 
+from halflist.client import HalflistClient
 from halflist.constants import TOOL_NAME_PATTERN
-from halflist.models import SuiteResult
+from halflist.models import CheckResult, SuiteResult
 from halflist.schema_gen import generate_args
 from halflist.suites.base import CheckSuite
 
 
 class ToolsSuite(CheckSuite):
     name = "tools"
+
+    def __init__(
+        self,
+        client: HalflistClient,
+        on_check: Callable[[CheckResult], None] | None = None,
+        *,
+        tool_args: dict[str, dict[str, Any]] | None = None,
+    ) -> None:
+        super().__init__(client, on_check)
+        self._tool_args = tool_args or {}
 
     async def run(self) -> SuiteResult:
         start = self.measure()
@@ -45,7 +57,7 @@ class ToolsSuite(CheckSuite):
             self.record(
                 "Every tool has a description",
                 "WARN",
-                f"{len(absent_desc) + len(empty_desc)} tool(s) — {'; '.join(parts)}",
+                f"{len(absent_desc) + len(empty_desc)} tool(s): {'; '.join(parts)}",
             )
         else:
             self.record("Every tool has a description", "PASS")
@@ -77,7 +89,7 @@ class ToolsSuite(CheckSuite):
             self.record("Tool names follow recommended pattern", "PASS")
 
         first_tool = tools[0]
-        args = generate_args(first_tool.inputSchema)
+        args = self._tool_args.get(first_tool.name) or generate_args(first_tool.inputSchema)
         call_result = None
         try:
             t0 = self.measure()
@@ -126,7 +138,9 @@ class ToolsSuite(CheckSuite):
                 if all_typed:
                     self.record("Each content item has a type field", "PASS")
                 else:
-                    self.record("Each content item has a type field", "FAIL", "Missing type on some items")
+                    self.record(
+                        "Each content item has a type field", "FAIL", "Missing type on some items"
+                    )
             else:
                 self.record("Response content is a list", "FAIL", f"Got {type(content).__name__}")
                 self.record("Each content item has a type field", "SKIP", "Content not a list")
