@@ -173,6 +173,18 @@ See the [output format reference](https://github.com/abhishekhsingh/mcp-halflist
 | [mcp-scan](https://github.com/invariantlabs-ai/mcp-scan) | Security scanning | Yes (OpenAI for local) | Yes (Invariant API) |
 | **mcp-halflist** | **CI-first check + security + bench** | **No** | **No** |
 
+## GitHub Action
+
+Add MCP server testing to your CI in 3 lines:
+
+```yaml
+- uses: abhishekhsingh/halflist-action@v1
+  with:
+    command: "python3 my_server.py"
+```
+
+See [halflist-action](https://github.com/abhishekhsingh/halflist-action) for full docs.
+
 ## Development
 
 ```bash
