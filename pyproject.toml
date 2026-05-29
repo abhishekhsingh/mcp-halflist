@@ -1,6 +1,6 @@
 [project]
 name = "mcp-halflist"
-version = "0.4.0"
+version = "1.0.0"
 description = "CI-first conformance, security, and benchmarking CLI for MCP servers. Lint your MCP server before your users do."
 readme = "README.md"
 license = { text = "MIT" }

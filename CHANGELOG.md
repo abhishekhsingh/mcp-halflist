@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.0.0 (2026-05-29)
 
 ### Features
 - **OAuth2 Authorization Code + PKCE** (Tier 3 auth): automatic browser-based authentication for HTTP servers that return 401
