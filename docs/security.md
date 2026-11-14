@@ -70,6 +70,8 @@ Detects references to sensitive file paths and credential-reading instructions.
 | `include...secret` | `Include the secret in the payload` |
 | `attach...cookie` | `Attach the session cookie` |
 
+The verb must be a whole word, and inflected forms such as `reads` or `sending` also match. The noun must not be part of a longer word, so `keyboard` does not match `key`. Identifiers are not instructions: `GET_ENV_INCLUDE_SECRETS` does not match `include...secret`, while names like `api_key` and `client_secret` still do.
+
 **WARN triggers:**
 
 - Tool description contains `http://` URLs (potential data exfiltration endpoint)

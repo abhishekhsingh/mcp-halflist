@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.2 (2026-11-14)
+
+### Bug Fixes
+- **Security scan false positives**: the data exfiltration rules matched inside identifiers and longer words. `include...secret` matched the environment variable name `GET_ENV_INCLUDE_SECRETS` in the description of the reference server's `get-env` tool, which was reported as THREAT DETECTED, and `upload...key` matched "keyboard". The verb must now be a whole word (inflections such as `reads` or `sending` still match) and the sensitive noun must not be part of a longer word. Names such as `api_key` and `client_secret` are still caught
+- Inflected forms of "include", for example "Including the secret in each call", are now detected
+
+### Internal
+- Regression tests cover both the false positives and the instructions that must still be reported
+
 ## v1.0.1 (2026-11-14)
 
 ### Bug Fixes

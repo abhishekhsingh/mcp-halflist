@@ -77,13 +77,35 @@ _EXFIL_FAIL_PATH_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"/etc/shadow\b"), "/etc/shadow"),
 ]
 
+# An instruction verb followed within 80 characters by a sensitive noun.
+#
+# The verb must be a whole word, optionally inflected ("reads", "sending"). An
+# underscore counts as part of a word, so identifiers such as
+# GET_ENV_INCLUDE_SECRETS or "bypass" are not treated as the verb. The noun must
+# not sit inside a longer word ("keyboard", "monkey"), but may follow an
+# underscore so that names like api_key or client_secret are still caught.
+_VERB_SUFFIX = r"(?:s|es|ed|ing)?"
+_NOT_AFTER_LETTER = r"(?<![A-Za-z])"
+_NOT_BEFORE_LETTER = r"(?![A-Za-z])"
+
+
+def _instruction_pattern(verb: str, noun: str) -> re.Pattern[str]:
+    return re.compile(
+        rf"\b{verb}\b.{{0,80}}{_NOT_AFTER_LETTER}(?:{noun}){_NOT_BEFORE_LETTER}",
+        re.IGNORECASE,
+    )
+
+
 _EXFIL_FAIL_IMPERATIVE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"read.{0,80}password", re.IGNORECASE), "read...password"),
-    (re.compile(r"send.{0,80}token", re.IGNORECASE), "send...token"),
-    (re.compile(r"upload.{0,80}key", re.IGNORECASE), "upload...key"),
-    (re.compile(r"pass.{0,80}credentials", re.IGNORECASE), "pass...credentials"),
-    (re.compile(r"include.{0,80}secret", re.IGNORECASE), "include...secret"),
-    (re.compile(r"attach.{0,80}cookie", re.IGNORECASE), "attach...cookie"),
+    (_instruction_pattern(rf"read{_VERB_SUFFIX}", r"passwords?"), "read...password"),
+    (_instruction_pattern(rf"send{_VERB_SUFFIX}", r"tokens?"), "send...token"),
+    (
+        _instruction_pattern(rf"upload{_VERB_SUFFIX}", r"keys?|keystores?|keychains?|keyrings?"),
+        "upload...key",
+    ),
+    (_instruction_pattern(rf"pass{_VERB_SUFFIX}", r"credentials?"), "pass...credentials"),
+    (_instruction_pattern(r"includ(?:e|es|ed|ing)", r"secrets?"), "include...secret"),
+    (_instruction_pattern(rf"attach{_VERB_SUFFIX}", r"cookies?"), "attach...cookie"),
 ]
 
 _EXFIL_WARN_HTTP: re.Pattern[str] = re.compile(r"http://")
