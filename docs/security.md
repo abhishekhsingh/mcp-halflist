@@ -119,7 +119,7 @@ Detects attempts to hide instructions through encoding or invisible characters.
 
 Detects changes to tool definitions since the last trusted snapshot.
 
-This check is **skipped by default**. Enable it with `--verify-pins` on `check` or `audit`.
+This check is **skipped by default**. Enable it with `--verify-pins` on `check` or `audit`, or pass `--pin-file <path>` to verify against a specific pin file (this implies `--verify-pins`).
 
 **Workflow:**
 
@@ -166,7 +166,7 @@ halflist audit --stdio "python3 my_server.py" --format json
 halflist pin --stdio "python3 my_server.py" -o ./pins/my-server.json
 # Commit pins/my-server.json to your repo
 # In CI:
-halflist check --stdio "python3 my_server.py" --verify-pins
+halflist check --stdio "python3 my_server.py" --pin-file ./pins/my-server.json
 ```
 
 The exit code is `1` if any security check fails, so you can gate deployments on it.

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from rich.console import Console, Group
+from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -123,8 +124,8 @@ def print_connection(
         transport_label += " [yellow](deprecated)[/yellow]"
 
     console.print(
-        f"  [green]✓[/green] Connected to [bold]{server_info.name}[/bold]"
-        f" v{server_info.version} · {counts} discovered{transport_label}"
+        f"  [green]✓[/green] Connected to [bold]{escape(server_info.name)}[/bold]"
+        f" v{escape(str(server_info.version))} · {counts} discovered{transport_label}"
     )
     console.print()
 
@@ -236,7 +237,7 @@ def render_final_report(
 ) -> None:
     server_line = "unknown"
     if report.server_info:
-        server_line = f"{report.server_info.name} v{report.server_info.version}"
+        server_line = escape(f"{report.server_info.name} v{report.server_info.version}")
 
     if is_filtered:
         panel_content = (
@@ -385,7 +386,7 @@ def _render_check_line(console: Console, check: CheckResult) -> None:
         console.print(line)
         if check.message and check.status in ("FAIL", "WARN"):
             for finding in check.message.split("; "):
-                console.print(f"      [dim]→ {finding}[/dim]")
+                console.print(f"      [dim]→ {escape(finding)}[/dim]")
     else:
         detail = ""
         if check.message:
@@ -486,7 +487,7 @@ class BenchLiveProgress:
 def render_bench_report(console: Console, report: BenchReport) -> None:
     server_line = "unknown"
     if report.server_info:
-        server_line = f"{report.server_info.name} v{report.server_info.version}"
+        server_line = escape(f"{report.server_info.name} v{report.server_info.version}")
 
     panel_content = (
         f"  Server:     [bold]{server_line}[/bold]\n"
@@ -522,7 +523,7 @@ def render_bench_report(console: Console, report: BenchReport) -> None:
         if bm.skipped:
             skipped_count += 1
             table.add_row(
-                f"[dim]{bm.tool_name}[/dim]",
+                f"[dim]{escape(bm.tool_name)}[/dim]",
                 "[dim]skipped (args rejected)[/dim]",
                 "",
                 "",
@@ -533,7 +534,7 @@ def render_bench_report(console: Console, report: BenchReport) -> None:
         elif bm.errors == bm.iterations:
             benchmarked_count += 1
             table.add_row(
-                bm.tool_name,
+                escape(bm.tool_name),
                 "[red]all failed[/red]",
                 "",
                 "",
@@ -545,7 +546,7 @@ def render_bench_report(console: Console, report: BenchReport) -> None:
             benchmarked_count += 1
             p99c = _latency_color(bm.p99_ms)
             table.add_row(
-                bm.tool_name,
+                escape(bm.tool_name),
                 _fmt_ms(bm.median_ms),
                 _fmt_ms(bm.p95_ms),
                 f"[{p99c}]{_fmt_ms(bm.p99_ms)}[/{p99c}]",
@@ -585,7 +586,7 @@ def render_audit_report(console: Console, report: AuditReport, verbose: bool) ->
 
     server_line = "unknown"
     if report.server_info:
-        server_line = f"{report.server_info.name} v{report.server_info.version}"
+        server_line = escape(f"{report.server_info.name} v{report.server_info.version}")
 
     panel_content = (
         f"  Server:     [bold]{server_line}[/bold]\n"
@@ -642,7 +643,7 @@ def render_audit_report(console: Console, report: AuditReport, verbose: bool) ->
             if bm.skipped:
                 audit_skipped += 1
                 table.add_row(
-                    f"[dim]{bm.tool_name}[/dim]",
+                    f"[dim]{escape(bm.tool_name)}[/dim]",
                     "[dim]skipped (args rejected)[/dim]",
                     "",
                     "",
@@ -653,7 +654,7 @@ def render_audit_report(console: Console, report: AuditReport, verbose: bool) ->
             elif bm.errors == bm.iterations:
                 audit_benched += 1
                 table.add_row(
-                    bm.tool_name,
+                    escape(bm.tool_name),
                     "[red]all failed[/red]",
                     "",
                     "",
@@ -665,7 +666,7 @@ def render_audit_report(console: Console, report: AuditReport, verbose: bool) ->
                 audit_benched += 1
                 p99c = _latency_color(bm.p99_ms)
                 table.add_row(
-                    bm.tool_name,
+                    escape(bm.tool_name),
                     _fmt_ms(bm.median_ms),
                     _fmt_ms(bm.p95_ms),
                     f"[{p99c}]{_fmt_ms(bm.p99_ms)}[/{p99c}]",

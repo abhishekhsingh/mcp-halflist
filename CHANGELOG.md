@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.0.1 (2026-11-14)
+
+### Bug Fixes
+- **Dependency cap**: `mcp` is now constrained to `<2`. `mcp` 2.x renamed `FastMCP` and changed the client result types, which made a fresh `pip install mcp-halflist` resolve to a version halflist cannot talk to (`'InitializeResult' object has no attribute 'serverInfo'`). Support for `mcp` 2.x is a separate piece of work
+- **Version string**: `halflist --version`, the terminal banner and the `version` field in JSON reports showed `0.4.0`. The version now has a single source (`src/halflist/__init__.py`, read by the build)
+- **Terminal output crash**: server-controlled text (server name, tool names, findings, error messages) was interpreted as Rich markup, so a name such as `foo[/x]` raised `MarkupError` and aborted the run. All such text is now escaped
+- **`Authorization` header detection** is case-insensitive. `--header "authorization: ..."` now suppresses automatic PKCE like `Authorization` does, and an OAuth client-credentials token replaces any case variant instead of sending two headers
+- **`rich` is now a declared dependency** (it was only installed transitively through `typer`)
+- `--format` help text for `check`, `bench` and `audit` now lists `junit`
+
+### Features
+- **`--pin-file`** on `check` and `audit`: verify tool pins against a specific file (implies `--verify-pins`), so a pin file committed to a repo can be used in CI. A missing file exits with code 3
+
+### Documentation
+- JUnit output is now documented in `docs/output-formats.md`
+- CI examples write JUnit output with shell redirection (`> results.xml`). `-o/--output` exists only on `report` and `pin`
+
+### Internal
+- Tests run with an isolated `HOME`, so they no longer write to the real `~/.halflist`
+- Ruff lint rules are pinned in `pyproject.toml` so CI does not change when ruff widens its default rule set
+- Regression tests added for every fix above
+
 ## v1.0.0 (2026-05-29)
 
 ### Features

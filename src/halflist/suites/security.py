@@ -152,10 +152,12 @@ class SecuritySuite(CheckSuite):
         *,
         verify_pins: bool = False,
         pins_dir: Path | None = None,
+        pin_file: Path | None = None,
     ) -> None:
         super().__init__(client, on_check)
         self._verify_pins = verify_pins
         self._pins_dir = pins_dir or Path.home() / ".halflist" / "pins"
+        self._pin_file = pin_file
 
     async def run(self) -> SuiteResult:
         start = self.measure()
@@ -368,8 +370,11 @@ class SecuritySuite(CheckSuite):
         if self.client.init_result and hasattr(self.client.init_result, "serverInfo"):
             server_name = self.client.init_result.serverInfo.name
 
-        safe_name = server_name.replace("/", "_").replace("\\", "_")
-        pin_file = self._pins_dir / f"{safe_name}.json"
+        if self._pin_file is not None:
+            pin_file = self._pin_file
+        else:
+            safe_name = server_name.replace("/", "_").replace("\\", "_")
+            pin_file = self._pins_dir / f"{safe_name}.json"
 
         if not pin_file.exists():
             self.record(

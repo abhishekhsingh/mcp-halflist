@@ -1,6 +1,6 @@
 # Output Formats
 
-halflist supports five output formats across its commands.
+halflist supports six output formats across its commands.
 
 ## Terminal (default)
 
@@ -68,7 +68,7 @@ Available on `check`, `bench`, and `audit` commands.
 **check** produces a `HalflistReport`:
 ```json
 {
-  "version": "0.4.0",
+  "version": "1.0.1",
   "timestamp": "2026-05-03T...",
   "server_info": { "name": "...", "version": "..." },
   "transport": "stdio",
@@ -84,7 +84,7 @@ Available on `check`, `bench`, and `audit` commands.
 **bench** produces a `BenchReport`:
 ```json
 {
-  "version": "0.4.0",
+  "version": "1.0.1",
   "timestamp": "2026-05-03T...",
   "server_info": { "name": "...", "version": "..." },
   "transport": "stdio",
@@ -125,6 +125,19 @@ if [ $? -ne 0 ]; then echo "Checks failed"; exit 1; fi
 # Parse score with jq
 SCORE=$(halflist check --stdio "python3 my_server.py" --format json | jq .score)
 ```
+
+## JUnit XML (`--format junit`)
+
+Available on `check`, `bench`, and `audit` commands, and via `halflist report --format junit`.
+
+- Report on **stdout**, like `--format json`. Redirect it to a file: `halflist check --stdio "..." --format junit > results.xml`
+- One `<testsuite>` per suite (`handshake`, `tools`, `resources`, `prompts`, `security`), one `<testcase>` per check
+- `FAIL` becomes `<failure type="FAIL">` and `WARN` becomes `<failure type="WARN">`, so CI test reporters show warnings even though the exit code stays `0`
+- `SKIP` becomes `<skipped>`
+- `bench` produces a single `benchmarks` suite. Each tool carries `p50_ms`, `p95_ms`, `p99_ms` and `iterations` as `<property>` elements; skipped tools are `<skipped>` and tools whose calls all failed are `<failure type="ERROR">`
+- Works with GitHub Actions, GitLab CI, Jenkins, and any other JUnit-compatible reporter
+
+A connection failure (exit code `2`) prints a human-readable message rather than XML.
 
 ## Markdown (`halflist report`)
 

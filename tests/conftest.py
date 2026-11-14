@@ -17,6 +17,18 @@ def strip_ansi(text: str) -> str:
     return _ANSI_RE.sub("", text)
 
 
+@pytest.fixture(autouse=True)
+def _isolated_home(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Point HOME at a throwaway dir so tests never touch the real ~/.halflist
+    (token cache, pins, config discovery)."""
+    home = tmp_path_factory.mktemp("home")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    return home
+
+
 @pytest.fixture
 def good_server_cmd() -> str:
     return f"{sys.executable} {SERVERS_DIR / 'good_server.py'}"

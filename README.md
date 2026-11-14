@@ -88,8 +88,8 @@ JUnit XML output works with GitHub Actions, GitLab CI, Jenkins, and any CI syste
 
 ```bash
 # Generate JUnit XML for CI test reporters
-halflist check --stdio "python3 server.py" --format junit -o results.xml
-halflist audit --stdio "python3 server.py" --format junit -o audit.xml
+halflist check --stdio "python3 server.py" --format junit > results.xml
+halflist audit --stdio "python3 server.py" --format junit > audit.xml
 ```
 
 ## Commands

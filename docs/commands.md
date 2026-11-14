@@ -76,6 +76,7 @@ Run protocol conformance and security checks against an MCP server.
 | `--quiet` | `-q` | off | Suppress server stderr output. Auto-enabled with `--format json` |
 | `--timeout` | | `30` | Timeout in seconds per operation |
 | `--verify-pins` | | off | Verify tool definitions against a saved pin snapshot |
+| `--pin-file` | | | Verify against this pin file instead of `~/.halflist/pins/` (implies `--verify-pins`) |
 | `--debug` | `-d` | off | Enable debug logging to stderr |
 | `--debug-log` | | | Write debug log to file (implies `--debug`) |
 | `--config` | | | Path to halflist.toml config file |
@@ -112,7 +113,7 @@ halflist check --stdio "python3 my_server.py" --suite handshake --suite tools
 halflist check --stdio "python3 my_server.py" --format json
 
 # JUnit XML output for CI test reporters (GitHub Actions, GitLab, Jenkins)
-halflist check --stdio "python3 my_server.py" --format junit -o results.xml
+halflist check --stdio "python3 my_server.py" --format junit > results.xml
 
 # Verbose output showing all checks
 halflist check --stdio "python3 my_server.py" --verbose
@@ -207,7 +208,7 @@ halflist bench --stdio "python3 my_server.py" --tool search --args-file args.jso
 halflist bench --stdio "python3 my_server.py" --format json
 
 # JUnit XML output
-halflist bench --stdio "python3 my_server.py" --format junit -o bench.xml
+halflist bench --stdio "python3 my_server.py" --format junit > bench.xml
 ```
 
 ### Output
@@ -257,6 +258,7 @@ Audit always runs all suites (no `--suite` filter) and benchmarks all discovered
 | `--quiet` | `-q` | off | Suppress server stderr output. Auto-enabled with `--format json` |
 | `--timeout` | | `30` | Timeout in seconds per operation (also limits each individual tool call during benchmarks) |
 | `--verify-pins` | | off | Verify tool definitions against a saved pin snapshot |
+| `--pin-file` | | | Verify against this pin file instead of `~/.halflist/pins/` (implies `--verify-pins`) |
 | `--debug` | `-d` | off | Enable debug logging to stderr |
 | `--debug-log` | | | Write debug log to file (implies `--debug`) |
 | `--config` | | | Path to halflist.toml config file |
@@ -276,7 +278,7 @@ halflist audit --http http://localhost:8080/mcp
 halflist audit --stdio "python3 my_server.py" --format json
 
 # JUnit XML output for CI test reporters
-halflist audit --stdio "python3 my_server.py" --format junit -o audit.xml
+halflist audit --stdio "python3 my_server.py" --format junit > audit.xml
 
 # With pin verification
 halflist audit --stdio "python3 my_server.py" --verify-pins
@@ -406,7 +408,7 @@ HTML reports are self-contained single files with no external dependencies. They
 
 Snapshot the current tool definitions (name, description, inputSchema) as SHA-256 hashes. Used with `--verify-pins` on `check` or `audit` to detect tool drift or rug pull attacks.
 
-Pins are stored in `~/.halflist/pins/<server-name>.json` by default.
+Pins are stored in `~/.halflist/pins/<server-name>.json` by default. To verify against a pin file stored elsewhere (for example one committed to your repo), pass it to `check` or `audit` with `--pin-file`.
 
 ### Options
 
@@ -446,6 +448,9 @@ halflist check --stdio "npx -y @modelcontextprotocol/server-everything" --verify
 
 # Pin to a custom path
 halflist pin --stdio "python3 my_server.py" -o ./pins/my-server.json
+
+# Verify against that file
+halflist check --stdio "python3 my_server.py" --pin-file ./pins/my-server.json
 ```
 
 ### Pin Verification Results

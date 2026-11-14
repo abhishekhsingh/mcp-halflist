@@ -8,6 +8,7 @@ from typing import Any, Optional
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 
 from halflist import __version__
 from halflist.config import (
@@ -139,7 +140,7 @@ async def _resolve_headers(
         for h in header:
             if ": " not in h:
                 progress_console.print(
-                    f"[red]Error:[/red] Invalid header format: '{h}'. Use 'Key: Value'."
+                    f"[red]Error:[/red] Invalid header format: '{escape(h)}'. Use 'Key: Value'."
                 )
                 raise typer.Exit(EXIT_CONFIG_ERROR)
             key, val = h.split(": ", 1)
@@ -148,10 +149,13 @@ async def _resolve_headers(
     if oauth_token_url and oauth_client_id and oauth_client_secret:
         from halflist.auth import fetch_oauth_token
 
-        if "Authorization" in headers:
+        existing_auth = [k for k in headers if k.lower() == "authorization"]
+        if existing_auth:
             progress_console.print(
                 "  [yellow]⚠[/yellow] OAuth token takes precedence over --header Authorization"
             )
+            for k in existing_auth:
+                del headers[k]
 
         try:
             token = await fetch_oauth_token(
@@ -161,7 +165,7 @@ async def _resolve_headers(
                 oauth_scope,
             )
         except Exception as e:
-            progress_console.print(f"[red]Error:[/red] OAuth token fetch failed: {e}")
+            progress_console.print(f"[red]Error:[/red] OAuth token fetch failed: {escape(str(e))}")
             raise typer.Exit(EXIT_TRANSPORT_ERROR)
 
         headers["Authorization"] = f"Bearer {token}"
@@ -202,7 +206,8 @@ def _maybe_setup_pkce(
     if not http or no_auth:
         return None, None
 
-    has_explicit_auth = headers and "Authorization" in headers
+    # HTTP header names are case-insensitive.
+    has_explicit_auth = bool(headers) and any(k.lower() == "authorization" for k in headers)
     if has_explicit_auth:
         return None, None
 
@@ -228,7 +233,7 @@ async def _discover(
     except Exception as e:
         tools = []
         if progress_console:
-            progress_console.print(f"  [yellow]⚠[/yellow] Tool discovery failed: {e}")
+            progress_console.print(f"  [yellow]⚠[/yellow] Tool discovery failed: {escape(str(e))}")
 
     resource_count: int | None = None
     if client.has_capability("resources"):
@@ -238,7 +243,9 @@ async def _discover(
         except Exception as e:
             resource_count = 0
             if progress_console:
-                progress_console.print(f"  [yellow]⚠[/yellow] Resource discovery failed: {e}")
+                progress_console.print(
+                    f"  [yellow]⚠[/yellow] Resource discovery failed: {escape(str(e))}"
+                )
 
     prompt_count: int | None = None
     if client.has_capability("prompts"):
@@ -248,7 +255,9 @@ async def _discover(
         except Exception as e:
             prompt_count = 0
             if progress_console:
-                progress_console.print(f"  [yellow]⚠[/yellow] Prompt discovery failed: {e}")
+                progress_console.print(
+                    f"  [yellow]⚠[/yellow] Prompt discovery failed: {escape(str(e))}"
+                )
 
     return tools, resource_count, prompt_count
 
@@ -269,6 +278,17 @@ def _build_suite_map() -> dict[str, type]:
     }
 
 
+def _resolve_pin_file(pin_file: str | None) -> Path | None:
+    """Validate ``--pin-file`` and return it as a Path (``None`` when not given)."""
+    if pin_file is None:
+        return None
+    path = Path(pin_file)
+    if not path.is_file():
+        console.print(f"[red]Error:[/red] Pin file not found: {escape(str(pin_file))}")
+        raise typer.Exit(EXIT_CONFIG_ERROR)
+    return path
+
+
 def _load_tool_args(args_file: str | None) -> dict[str, dict[str, Any]] | None:
     if args_file is None:
         return None
@@ -276,13 +296,13 @@ def _load_tool_args(args_file: str | None) -> dict[str, dict[str, Any]] | None:
 
     path = Path(args_file)
     if not path.exists():
-        console.print(f"[red]Error:[/red] Args file not found: {args_file}")
+        console.print(f"[red]Error:[/red] Args file not found: {escape(str(args_file))}")
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     try:
         data = json.loads(path.read_text())
     except (json.JSONDecodeError, OSError) as e:
-        console.print(f"[red]Error:[/red] Could not read args file: {e}")
+        console.print(f"[red]Error:[/red] Could not read args file: {escape(str(e))}")
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     if not isinstance(data, dict):
@@ -297,7 +317,7 @@ def _load_tool_args(args_file: str | None) -> dict[str, dict[str, Any]] | None:
             continue
         if not isinstance(val, dict):
             console.print(
-                f"[red]Error:[/red] Args for tool '{key}' must be a JSON object, got {type(val).__name__}."
+                f"[red]Error:[/red] Args for tool '{escape(str(key))}' must be a JSON object, got {type(val).__name__}."
             )
             raise typer.Exit(EXIT_CONFIG_ERROR)
         result[key] = val
@@ -342,7 +362,9 @@ def check(
     args_file: Optional[str] = typer.Option(
         None, "--args-file", help="JSON file mapping tool names to custom arguments."
     ),
-    format: Optional[str] = typer.Option(None, "--format", help="Output format: terminal or json."),
+    format: Optional[str] = typer.Option(
+        None, "--format", help="Output format: terminal, json, or junit."
+    ),
     suite: Optional[list[str]] = typer.Option(None, "--suite", help="Suite(s) to run. Repeatable."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show all check details."),
     quiet: bool = typer.Option(
@@ -356,6 +378,11 @@ def check(
     ),
     verify_pins: bool = typer.Option(
         False, "--verify-pins", help="Verify tool pins against saved snapshot."
+    ),
+    pin_file: Optional[str] = typer.Option(
+        None,
+        "--pin-file",
+        help="Verify tool pins against this pin file (implies --verify-pins).",
     ),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
     debug_log: Optional[str] = typer.Option(
@@ -419,6 +446,9 @@ def check(
         raise typer.Exit(err)
 
     tool_args = _load_tool_args(args_file)
+    pin_path = _resolve_pin_file(pin_file)
+    if pin_path is not None:
+        verify_pins = True
     effective_quiet = quiet or format in ("json", "junit")
     exit_code = asyncio.run(
         _run_checks(
@@ -435,6 +465,7 @@ def check(
             effective_quiet,
             timeout,
             verify_pins,
+            pin_file=pin_path,
             no_browser=no_browser,
             clear_tokens=clear_tokens,
             callback_port=callback_port,
@@ -460,6 +491,7 @@ async def _run_checks(
     timeout: int,
     verify_pins: bool = False,
     *,
+    pin_file: Path | None = None,
     no_browser: bool = False,
     tool_args: dict[str, dict[str, Any]] | None = None,
     clear_tokens: bool = False,
@@ -526,7 +558,7 @@ async def _run_checks(
                     err = {"error": str(e), "exit_code": EXIT_TRANSPORT_ERROR}
                     print(json.dumps(err, indent=2))
                 else:
-                    console.print(f"\n  [red]✗[/red] Connection failed: {e}")
+                    console.print(f"\n  [red]✗[/red] Connection failed: {escape(str(e))}")
                 return EXIT_TRANSPORT_ERROR
 
         tools, resource_count, prompt_count = await _discover(client, progress_console)
@@ -544,7 +576,7 @@ async def _run_checks(
         if suite_filter:
             for s in suite_filter:
                 if s not in all_suites_map:
-                    progress_console.print(f"[red]Error:[/red] Unknown suite '{s}'")
+                    progress_console.print(f"[red]Error:[/red] Unknown suite '{escape(s)}'")
                     return EXIT_CONFIG_ERROR
             suites_to_run = {k: v for k, v in all_suites_map.items() if k in suite_filter}
         else:
@@ -569,7 +601,7 @@ async def _run_checks(
 
                 if suite_cls is SecuritySuite:
                     suite_instance = SecuritySuite(
-                        client, on_check=on_check, verify_pins=verify_pins
+                        client, on_check=on_check, verify_pins=verify_pins, pin_file=pin_file
                     )
                 elif suite_cls is ToolsSuite and tool_args:
                     suite_instance = ToolsSuite(client, on_check=on_check, tool_args=tool_args)
@@ -646,7 +678,9 @@ def bench(
     warmup: Optional[int] = typer.Option(
         None, "--warmup", "-w", help="Warmup iterations (discarded)."
     ),
-    format: Optional[str] = typer.Option(None, "--format", help="Output format: terminal or json."),
+    format: Optional[str] = typer.Option(
+        None, "--format", help="Output format: terminal, json, or junit."
+    ),
     quiet: bool = typer.Option(
         False,
         "--quiet",
@@ -832,7 +866,7 @@ async def _run_bench(
                     err = {"error": str(e), "exit_code": EXIT_TRANSPORT_ERROR}
                     print(json.dumps(err, indent=2))
                 else:
-                    console.print(f"\n  [red]✗[/red] Connection failed: {e}")
+                    console.print(f"\n  [red]✗[/red] Connection failed: {escape(str(e))}")
                 return EXIT_TRANSPORT_ERROR
 
         t_disc = time.monotonic()
@@ -840,7 +874,7 @@ async def _run_bench(
             all_tool_list = await client.list_tools()
         except Exception as e:
             all_tool_list = []
-            progress_console.print(f"  [yellow]⚠[/yellow] Tool discovery failed: {e}")
+            progress_console.print(f"  [yellow]⚠[/yellow] Tool discovery failed: {escape(str(e))}")
         discovery_ms = (time.monotonic() - t_disc) * 1000
 
         selected = select_tools(all_tool_list, tool_names, bench_all)
@@ -966,7 +1000,9 @@ def audit(
         None, "--warmup", "-w", help="Warmup iterations (discarded)."
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show all check details."),
-    format: Optional[str] = typer.Option(None, "--format", help="Output format: terminal or json."),
+    format: Optional[str] = typer.Option(
+        None, "--format", help="Output format: terminal, json, or junit."
+    ),
     quiet: bool = typer.Option(
         False,
         "--quiet",
@@ -978,6 +1014,11 @@ def audit(
     ),
     verify_pins: bool = typer.Option(
         False, "--verify-pins", help="Verify tool pins against saved snapshot."
+    ),
+    pin_file: Optional[str] = typer.Option(
+        None,
+        "--pin-file",
+        help="Verify tool pins against this pin file (implies --verify-pins).",
     ),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging to stderr."),
     debug_log: Optional[str] = typer.Option(
@@ -1042,6 +1083,9 @@ def audit(
         raise typer.Exit(err)
 
     tool_args = _load_tool_args(args_file)
+    pin_path = _resolve_pin_file(pin_file)
+    if pin_path is not None:
+        verify_pins = True
     effective_quiet = quiet or format in ("json", "junit")
     exit_code = asyncio.run(
         _run_audit(
@@ -1059,6 +1103,7 @@ def audit(
             effective_quiet,
             timeout,
             verify_pins,
+            pin_file=pin_path,
             no_browser=no_browser,
             clear_tokens=clear_tokens,
             callback_port=callback_port,
@@ -1085,6 +1130,7 @@ async def _run_audit(
     timeout: int,
     verify_pins: bool = False,
     *,
+    pin_file: Path | None = None,
     no_browser: bool = False,
     clear_tokens: bool = False,
     callback_port: int | None = None,
@@ -1158,7 +1204,7 @@ async def _run_audit(
                     err = {"error": str(e), "exit_code": EXIT_TRANSPORT_ERROR}
                     print(json.dumps(err, indent=2))
                 else:
-                    console.print(f"\n  [red]✗[/red] Connection failed: {e}")
+                    console.print(f"\n  [red]✗[/red] Connection failed: {escape(str(e))}")
                 return EXIT_TRANSPORT_ERROR
 
         t_disc = time.monotonic()
@@ -1196,7 +1242,7 @@ async def _run_audit(
 
                 if suite_cls is SecuritySuite:
                     suite_instance = SecuritySuite(
-                        client, on_check=on_check, verify_pins=verify_pins
+                        client, on_check=on_check, verify_pins=verify_pins, pin_file=pin_file
                     )
                 elif suite_cls is ToolsSuite and tool_args:
                     suite_instance = ToolsSuite(client, on_check=on_check, tool_args=tool_args)
@@ -1582,13 +1628,13 @@ def report(
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     if not json_file.exists():
-        console.print(f"[red]Error:[/red] File not found: {json_file}")
+        console.print(f"[red]Error:[/red] File not found: {escape(str(json_file))}")
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     try:
         data = json.loads(json_file.read_text())
     except json.JSONDecodeError as e:
-        console.print(f"[red]Error:[/red] Invalid JSON: {e}")
+        console.print(f"[red]Error:[/red] Invalid JSON: {escape(str(e))}")
         raise typer.Exit(EXIT_CONFIG_ERROR)
 
     if badge:
@@ -1620,7 +1666,7 @@ def report(
 
     if output:
         Path(output).write_text(result)
-        console.print(f"  Written to {output}")
+        console.print(f"  Written to {escape(str(output))}")
     else:
         print(result, end="")
 
@@ -1792,13 +1838,13 @@ async def _run_pin(
                 await _connect_client(client, stdio, http, headers, auth=auth_provider)
                 server_info = await client.initialize()
             except Exception as e:
-                console.print(f"\n  [red]✗[/red] Connection failed: {e}")
+                console.print(f"\n  [red]✗[/red] Connection failed: {escape(str(e))}")
                 return EXIT_TRANSPORT_ERROR
 
         try:
             tools = await client.list_tools()
         except Exception as e:
-            console.print(f"  [red]✗[/red] Could not list tools: {e}")
+            console.print(f"  [red]✗[/red] Could not list tools: {escape(str(e))}")
             return EXIT_FAILURE
 
         tool_hashes: dict[str, str] = {}
@@ -1832,9 +1878,9 @@ async def _run_pin(
 
         console.print(
             f"  [green]✓[/green] Pinned {len(tool_hashes)} tools"
-            f" from [bold]{server_info.name}[/bold] v{server_info.version}"
+            f" from [bold]{escape(server_info.name)}[/bold] v{escape(str(server_info.version))}"
         )
-        console.print(f"  [dim]Saved to {pin_file}[/dim]")
+        console.print(f"  [dim]Saved to {escape(str(pin_file))}[/dim]")
         return EXIT_OK
     finally:
         await client.close()
