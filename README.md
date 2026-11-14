@@ -15,7 +15,7 @@ Point it at any [MCP](https://modelcontextprotocol.io) server (stdio or HTTP) an
 
 ## See It In Action
 
-**Terminal output:**
+**Terminal output** (`halflist audit` against the official reference server, `-n 3 -w 1`):
 
 ![halflist audit output](https://github.com/abhishekhsingh/mcp-halflist/blob/main/examples/terminal-output.png?raw=true)
 
@@ -32,10 +32,12 @@ pip install mcp-halflist
 
 > macOS users: use `python3` instead of `python` in server commands.
 
+> The `npx` examples below run the official MCP reference server, which needs Node.js 24 or newer.
+
 ## Quick Start
 
 ```bash
-# Full audit of the official MCP reference server (runs instantly, no setup)
+# Full audit of the official MCP reference server (benchmarks every tool, so it takes a couple of minutes; add -n 3 -w 1 for a faster run)
 halflist audit --stdio "npx -y @modelcontextprotocol/server-everything"
 
 # Security scan + conformance check

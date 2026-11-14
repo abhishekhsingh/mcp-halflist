@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>mcp-halflist — mcp-servers/everything — Benchmark</title>
+<title>mcp-halflist - mcp-servers/everything - Benchmark</title>
 <style>
 :root{
   --bg:#0a0a0a;--surface:#111111;--border:#1a1a1a;
-  --green:#00ff41;--green-light:#33ff66;--green-dim:#4a7a4a;
+  --green:#00ff41;--green-dim:#4a7a4a;
   --red:#ff0040;--amber:#ffaa00;--gray:#555555;--cyan:#00ccff;
   --text:#c0c0c0;
   --font-mono:'JetBrains Mono','Fira Code','Cascadia Code',monospace;
@@ -89,27 +89,30 @@ tr:hover td{background:#151515}
 <div class="logo">HALFLIST</div>
 <p class="tagline">Lint your MCP server before your users do.</p>
 </div>
-<div class="card"><h2>mcp-servers/everything v2.0.0 &mdash; Benchmark</h2>
-<div class="meta-grid"><div class="meta-item"><span class="meta-label">Transport:</span> <span class="meta-value">stdio</span></div><div class="meta-item"><span class="meta-label">Tools:</span> <span class="meta-value">12 of 13</span></div><div class="meta-item"><span class="meta-label">Iterations:</span> <span class="meta-value">5</span></div><div class="meta-item"><span class="meta-label">Connection:</span> <span class="meta-value">885ms</span></div><div class="meta-item"><span class="meta-label">Total:</span> <span class="meta-value">71.3s</span></div></div></div>
+<div class="card"><h2>mcp-servers/everything v2.3.0 &mdash; Benchmark</h2>
+<div class="meta-grid"><div class="meta-item"><span class="meta-label">Transport:</span> <span class="meta-value">stdio</span></div><div class="meta-item"><span class="meta-label">Tools:</span> <span class="meta-value">16 of 16</span></div><div class="meta-item"><span class="meta-label">Iterations:</span> <span class="meta-value">3</span></div><div class="meta-item"><span class="meta-label">Connection:</span> <span class="meta-value">612ms</span></div><div class="meta-item"><span class="meta-label">Total:</span> <span class="meta-value">41.8s</span></div></div></div>
 <div class="card"><h2>Latency per Tool</h2>
 <table><thead><tr><th>Tool</th><th>p50</th><th>p95</th><th>p99</th><th>min</th><th>max</th><th>p99 bar</th></tr></thead><tbody>
 <tr><td>echo</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
 <tr><td>get-annotated-message</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
 <tr><td>get-env</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-header-params</td><td>2ms</td><td>2ms</td><td>2ms</td><td>2ms</td><td>2ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">2ms</div></div></td></tr>
 <tr><td>get-resource-links</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
-<tr><td>get-resource-reference</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
-<tr><td>get-structured-content</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
-<tr><td>get-sum</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">0ms</div></div></td></tr>
-<tr><td>get-tiny-image</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
-<tr><td>gzip-file-as-resource</td><td>24ms</td><td>31ms</td><td>31ms</td><td>23ms</td><td>31ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">31ms</div></div></td></tr>
-<tr><td>toggle-simulated-logging</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">0ms</div></div></td></tr>
-<tr><td>toggle-subscriber-updates</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">0ms</div></div></td></tr>
-<tr><td>trigger-long-running-operation</td><td>10012ms</td><td>10013ms</td><td>10013ms</td><td>10008ms</td><td>10013ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:100%;background:#ff0040"></div><div class="bar-label">10013ms</div></div></td></tr>
-<tr style="color:#555555"><td>simulate-research-query</td><td colspan="6" style="font-style:italic">skipped (args rejected)</td></tr>
+<tr><td>get-resource-reference</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">0ms</div></div></td></tr>
+<tr><td>get-structured-content</td><td>2ms</td><td>3ms</td><td>3ms</td><td>1ms</td><td>3ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">3ms</div></div></td></tr>
+<tr><td>get-sum</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>get-tiny-image</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">0ms</div></div></td></tr>
+<tr><td>gzip-file-as-resource</td><td>99ms</td><td>100ms</td><td>100ms</td><td>89ms</td><td>100ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:1%;background:#00ff41"></div><div class="bar-label">100ms</div></div></td></tr>
+<tr><td>trigger-list-changed</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>trigger-log-messages</td><td>1ms</td><td>2ms</td><td>2ms</td><td>1ms</td><td>2ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">2ms</div></div></td></tr>
+<tr><td>trigger-long-running-operation</td><td>10011ms</td><td>10013ms</td><td>10013ms</td><td>10010ms</td><td>10013ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:100%;background:#ff0040"></div><div class="bar-label">10013ms</div></div></td></tr>
+<tr><td>trigger-resource-update</td><td>&lt;1ms</td><td>1ms</td><td>1ms</td><td>&lt;1ms</td><td>1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>toggle-simulated-logging</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
+<tr><td>toggle-subscriber-updates</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td>&lt;1ms</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-fill" style="width:0%;background:#00ff41"></div><div class="bar-label">1ms</div></div></td></tr>
 </tbody></table>
 </div>
 
-<p class="footer">Generated by mcp-halflist v0.4.0 · <a href="https://github.com/abhishekhsingh/mcp-halflist">GitHub</a></p>
+<p class="footer">Generated by mcp-halflist v1.0.2 · <a href="https://github.com/abhishekhsingh/mcp-halflist">GitHub</a></p>
 </div>
 </body>
 </html>
