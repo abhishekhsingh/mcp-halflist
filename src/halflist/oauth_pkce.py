@@ -199,37 +199,111 @@ async def open_browser_handler(url: str) -> None:
     webbrowser.open(url)
 
 
+class _StdinLines:
+    """Read lines from stdin without a worker thread when the event loop can watch it.
+
+    A thread blocked in ``sys.stdin.readline()`` keeps the process alive after the login
+    has finished, until stdin is closed. So when stdin has a file descriptor that the
+    event loop can watch, it is watched with ``loop.add_reader`` instead. When it cannot
+    be watched (no file descriptor, a regular file, or an event loop without
+    ``add_reader`` support), lines are read in an executor thread.
+    """
+
+    def __init__(self) -> None:
+        self._buf = b""
+        self._eof = False
+
+    async def readline(self) -> str | None:
+        """Return the next line, or ``None`` once stdin is closed."""
+        loop = asyncio.get_running_loop()
+        try:
+            fd = sys.stdin.fileno()
+        except (AttributeError, ValueError, OSError):
+            return await self._readline_in_thread(loop)
+
+        while b"\n" not in self._buf and not self._eof:
+            try:
+                data = await self._read_chunk(loop, fd)
+            except (NotImplementedError, OSError, ValueError):
+                return await self._readline_in_thread(loop)
+            if data:
+                self._buf += data
+            else:
+                self._eof = True
+
+        if b"\n" in self._buf:
+            line, _, self._buf = self._buf.partition(b"\n")
+            return line.decode(errors="replace")
+        if self._buf:
+            line, self._buf = self._buf, b""
+            return line.decode(errors="replace")
+        return None
+
+    @staticmethod
+    async def _read_chunk(loop: asyncio.AbstractEventLoop, fd: int) -> bytes:
+        future: asyncio.Future[bytes] = loop.create_future()
+
+        def on_readable() -> None:
+            if future.done():
+                return
+            try:
+                future.set_result(os.read(fd, 65536))
+            except BlockingIOError:
+                return
+            except OSError:
+                future.set_result(b"")
+
+        loop.add_reader(fd, on_readable)
+        try:
+            return await future
+        finally:
+            loop.remove_reader(fd)
+
+    @staticmethod
+    async def _readline_in_thread(loop: asyncio.AbstractEventLoop) -> str | None:
+        line: str = await loop.run_in_executor(None, sys.stdin.readline)
+        return line if line else None
+
+
 async def _headless_callback(
     callback_server: CallbackServer,
 ) -> tuple[str, str | None]:
     """Race between the callback server and stdin code entry.
 
     In headless mode, the user may paste the full callback URL into stdin
-    if their browser cannot reach 127.0.0.1.
+    if their browser cannot reach 127.0.0.1. Empty lines are ignored, and a
+    closed stdin (CI, ``/dev/null``) just leaves the callback server to finish the login.
     """
     from rich.console import Console
 
     c = Console(stderr=True)
     c.print("  [dim]Waiting for callback... or paste the callback URL below:[/dim]")
 
-    loop = asyncio.get_event_loop()
+    stdin_lines = _StdinLines()
 
-    async def _read_stdin() -> tuple[str, str | None]:
-        line: str = await loop.run_in_executor(None, sys.stdin.readline)
-        line = line.strip()
-        if not line:
-            raise RuntimeError("Empty input")
-        parsed = urlparse(line)
-        params = parse_qs(parsed.query)
-        code = params.get("code", [None])[0]
-        state = params.get("state", [None])[0]
-        if code:
-            callback_server.iss = params.get("iss", [None])[0]
-            return (code, state)
-        return (line, None)
+    async def _read_pasted_callback() -> tuple[str, str | None]:
+        while True:
+            try:
+                line = await stdin_lines.readline()
+            except Exception:
+                line = None  # stdin cannot be read: treat it like a closed stdin
+            if line is None:
+                # stdin is closed: only the callback server can complete the login.
+                await asyncio.Event().wait()
+            line = line.strip()
+            if not line:
+                continue
+            parsed = urlparse(line)
+            params = parse_qs(parsed.query)
+            code = params.get("code", [None])[0]
+            state = params.get("state", [None])[0]
+            if code:
+                callback_server.iss = params.get("iss", [None])[0]
+                return (code, state)
+            return (line, None)
 
     server_task = asyncio.create_task(callback_server.wait_for_callback())
-    stdin_task = asyncio.create_task(_read_stdin())
+    stdin_task = asyncio.create_task(_read_pasted_callback())
 
     done, pending = await asyncio.wait(
         {server_task, stdin_task},
@@ -249,10 +323,12 @@ async def _headless_callback(
 async def _print_url_handler(url: str) -> None:
     """Print the authorization URL for headless / --no-browser mode."""
     from rich.console import Console
+    from rich.markup import escape
 
     c = Console(stderr=True)
     c.print("\n  [bold]Open this URL in your browser to authorize:[/bold]")
-    c.print(f"  [blue]{url}[/blue]\n")
+    # soft_wrap: never insert line breaks into the URL, so it can be copied as one piece.
+    c.print(f"  [blue]{escape(url)}[/blue]\n", soft_wrap=True)
 
 
 def create_oauth_provider(

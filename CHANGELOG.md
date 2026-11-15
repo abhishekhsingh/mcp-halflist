@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.1.1 (2026-11-15)
+
+### Bug Fixes
+- `--no-browser` login no longer aborts when stdin is closed or empty (CI, `/dev/null`, or a stray Enter key). Empty input is ignored and the callback server completes the login, as before when you open the printed URL
+- The process now exits as soon as the login has finished. Before, it stayed alive until stdin was closed or a key was pressed
+- The authorization URL printed by `--no-browser` is no longer broken across lines at the terminal width, so it can be copied as one piece
+
+### Internal
+- Regression tests cover closed, empty and unreadable stdin, pasting the callback URL, the process exiting after login, and the printed URL
+
 ## v1.1.0 (2026-11-15)
 
 ### Changes
