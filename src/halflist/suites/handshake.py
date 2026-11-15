@@ -17,8 +17,8 @@ class HandshakeSuite(CheckSuite):
 
         self.record("Server responds to initialize", "PASS")
 
-        if hasattr(result, "protocolVersion") and result.protocolVersion:
-            self.record("Protocol version returned", "PASS", f"v{result.protocolVersion}")
+        if hasattr(result, "protocol_version") and result.protocol_version:
+            self.record("Protocol version returned", "PASS", f"v{result.protocol_version}")
         else:
             self.record("Protocol version returned", "FAIL", "Missing protocolVersion")
 
@@ -28,17 +28,17 @@ class HandshakeSuite(CheckSuite):
             self.record("Capabilities object present", "FAIL", "Missing capabilities")
 
         if (
-            hasattr(result, "serverInfo")
-            and result.serverInfo
-            and hasattr(result.serverInfo, "name")
-            and result.serverInfo.name
-            and hasattr(result.serverInfo, "version")
-            and result.serverInfo.version
+            hasattr(result, "server_info")
+            and result.server_info
+            and hasattr(result.server_info, "name")
+            and result.server_info.name
+            and hasattr(result.server_info, "version")
+            and result.server_info.version
         ):
             self.record(
                 "Server info has name and version",
                 "PASS",
-                f"{result.serverInfo.name} v{result.serverInfo.version}",
+                f"{result.server_info.name} v{result.server_info.version}",
             )
         else:
             self.record(

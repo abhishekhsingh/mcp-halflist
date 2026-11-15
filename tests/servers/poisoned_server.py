@@ -1,8 +1,8 @@
 import base64
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
-mcp = FastMCP("poisoned-test-server")
+mcp = MCPServer("poisoned-test-server", version="1.0.0")
 
 
 @mcp.tool()

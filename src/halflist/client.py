@@ -7,7 +7,7 @@ import time
 from contextlib import AsyncExitStack
 from typing import Any
 
-import httpx
+import httpx2
 from mcp import types
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
@@ -56,7 +56,7 @@ class HalflistClient:
         self,
         url: str,
         headers: dict[str, str] | None = None,
-        auth: httpx.Auth | None = None,
+        auth: httpx2.Auth | None = None,
     ) -> None:
         """Connect via Streamable HTTP, falling back to legacy SSE.
 
@@ -89,14 +89,14 @@ class HalflistClient:
         self,
         url: str,
         headers: dict[str, str] | None = None,
-        auth: httpx.Auth | None = None,
+        auth: httpx2.Auth | None = None,
         init_timeout: float | None = None,
     ) -> None:
         from mcp.client.streamable_http import streamable_http_client
 
         exit_stack = AsyncExitStack()
         try:
-            http_client: httpx.AsyncClient | None = None
+            http_client: httpx2.AsyncClient | None = None
             hooks = create_debug_event_hooks()
             if headers or auth or hooks:
                 kwargs: dict[str, Any] = {}
@@ -106,14 +106,14 @@ class HalflistClient:
                     kwargs["auth"] = auth
                 if hooks:
                     kwargs["event_hooks"] = hooks
-                http_client = httpx.AsyncClient(**kwargs)
+                http_client = httpx2.AsyncClient(**kwargs)
                 exit_stack.push_async_callback(http_client.aclose)
 
             ctx_args: dict[str, Any] = {"url": url}
             if http_client:
                 ctx_args["http_client"] = http_client
 
-            read_stream, write_stream, _ = await exit_stack.enter_async_context(
+            read_stream, write_stream = await exit_stack.enter_async_context(
                 streamable_http_client(**ctx_args)
             )
             session = await exit_stack.enter_async_context(ClientSession(read_stream, write_stream))
@@ -139,7 +139,7 @@ class HalflistClient:
         self,
         url: str,
         headers: dict[str, str] | None = None,
-        auth: httpx.Auth | None = None,
+        auth: httpx2.Auth | None = None,
         init_timeout: float | None = None,
     ) -> None:
         from mcp.client.sse import sse_client
@@ -181,16 +181,16 @@ class HalflistClient:
     async def initialize(self) -> ServerInfo:
         if self.init_result is not None:
             return ServerInfo(
-                name=self.init_result.serverInfo.name,
-                version=self.init_result.serverInfo.version,
+                name=self.init_result.server_info.name,
+                version=self.init_result.server_info.version,
             )
         with MCPDebugLogger("initialize") as dbg:
             start = time.monotonic()
             result = await self.session.initialize()
             self._last_duration_ms = (time.monotonic() - start) * 1000
             self.init_result = result
-            dbg.success(f"{result.serverInfo.name} v{result.serverInfo.version}")
-        return ServerInfo(name=result.serverInfo.name, version=result.serverInfo.version)
+            dbg.success(f"{result.server_info.name} v{result.server_info.version}")
+        return ServerInfo(name=result.server_info.name, version=result.server_info.version)
 
     def has_capability(self, name: str) -> bool:
         if self.init_result is None or self.init_result.capabilities is None:
@@ -214,11 +214,9 @@ class HalflistClient:
         return result.resources
 
     async def read_resource(self, uri: str) -> types.ReadResourceResult:
-        from pydantic import AnyUrl
-
         with MCPDebugLogger("resources/read", uri) as dbg:
             start = time.monotonic()
-            result = await self.session.read_resource(AnyUrl(uri))
+            result = await self.session.read_resource(uri)
             self._last_duration_ms = (time.monotonic() - start) * 1000
             count = len(result.contents) if result.contents else 0
             dbg.success(f"ok ({count} content items)")
@@ -252,7 +250,7 @@ class HalflistClient:
             result = await self.session.call_tool(name, arguments)
             self._last_duration_ms = (time.monotonic() - start) * 1000
             content_count = len(result.content) if result.content else 0
-            status = "error" if getattr(result, "isError", False) else "ok"
+            status = "error" if getattr(result, "is_error", False) else "ok"
             dbg.success(f"{status} ({content_count} content items)")
         return result
 

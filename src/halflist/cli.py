@@ -1853,7 +1853,7 @@ async def _run_pin(
                 {
                     "name": t.name,
                     "description": t.description,
-                    "inputSchema": t.inputSchema,
+                    "inputSchema": t.input_schema,
                 },
                 sort_keys=True,
             )

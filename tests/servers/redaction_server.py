@@ -5,9 +5,9 @@ and mentions credential words. It is a safety note, not an instruction, so the
 security scan must not report it as a threat.
 """
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
-mcp = FastMCP("redaction-test-server")
+mcp = MCPServer("redaction-test-server", version="1.0.0")
 
 
 @mcp.tool()

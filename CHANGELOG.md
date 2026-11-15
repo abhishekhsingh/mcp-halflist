@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.1.0 (2026-11-15)
+
+### Changes
+- **halflist now runs on `mcp` 2.x**: the dependency is `mcp>=2.3.0,<3` (it was `<2`). Every command, option, exit code and report format behaves as before. The servers you test can be built with any MCP SDK or language; this only changes the SDK halflist itself uses. `mcp` 1.x is no longer supported, so stay on halflist 1.0.x if you need it
+- `httpx2` is now a declared dependency, because halflist passes HTTP clients and auth providers to the `mcp` 2 SDK. `httpx` is still used for the OAuth client-credentials token request
+
+### Bug Fixes
+- OAuth PKCE login passes the RFC 9207 `iss` redirect parameter to the SDK, including when the callback URL is pasted in `--no-browser` mode, because the `mcp` 2 SDK validates it
+
+### Notes from the SDK upgrade
+- A redirect whose `iss` does not match the authorization server is now rejected (the `mcp` 2 SDK checks it)
+- Newly registered OAuth clients are stored with an extra `application_type` field in `~/.halflist/tokens/`. Token files written by earlier versions keep working, and files written by this version are readable by earlier versions
+- When an HTTP server is unreachable, the SSE part of the connection error now reads "All connection attempts failed" instead of "unhandled errors in a TaskGroup". The exit code is unchanged
+
+### Internal
+- Test servers use the `mcp` 2 server API and regression tests cover the issuer handling
+- Before release, the output of check, audit, bench, pin and watch was compared with 1.0.2 across stdio and HTTP servers, with no differences other than the ones listed above
+
 ## v1.0.2 (2026-11-14)
 
 ### Bug Fixes

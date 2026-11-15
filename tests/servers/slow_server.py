@@ -1,8 +1,8 @@
 import asyncio
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
-mcp = FastMCP("slow-test-server")
+mcp = MCPServer("slow-test-server", version="1.0.0")
 
 
 @mcp.tool()

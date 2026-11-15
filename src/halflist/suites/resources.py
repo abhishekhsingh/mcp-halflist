@@ -104,7 +104,7 @@ class ResourcesSuite(CheckSuite):
         # Check mimeType format if present
         bad_mime: list[str] = []
         for r in resources:
-            mt = getattr(r, "mimeType", None)
+            mt = getattr(r, "mime_type", None)
             if mt is not None and "/" not in mt:
                 bad_mime.append(f"{getattr(r, 'name', None) or r.uri}: {mt}")
         if bad_mime:

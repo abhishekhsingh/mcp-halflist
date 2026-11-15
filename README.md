@@ -34,6 +34,8 @@ pip install mcp-halflist
 
 > The `npx` examples below run the official MCP reference server, which needs Node.js 24 or newer.
 
+> halflist itself uses the `mcp` 2.x SDK. The servers you test can be built with any MCP SDK or language.
+
 ## Quick Start
 
 ```bash

@@ -15,7 +15,12 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from mcp.client.auth import OAuthClientProvider
-from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
+from mcp.shared.auth import (
+    AuthorizationCodeResult,
+    OAuthClientInformationFull,
+    OAuthClientMetadata,
+    OAuthToken,
+)
 
 _PORT_RANGE = range(3030, 3040)
 
@@ -32,6 +37,8 @@ class CallbackServer:
         self._server: HTTPServer | None = None
         self._thread: threading.Thread | None = None
         self.port: int = 0
+        # RFC 9207 issuer from the last redirect, if the authorization server sent one.
+        self.iss: str | None = None
         self._requested_port = port
 
     @property
@@ -41,6 +48,7 @@ class CallbackServer:
     def start(self, loop: asyncio.AbstractEventLoop) -> None:
         self._future = loop.create_future()
         future = self._future
+        owner = self
 
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self_handler) -> None:  # noqa: N802
@@ -53,6 +61,7 @@ class CallbackServer:
                 params = parse_qs(parsed.query)
                 code = params.get("code", [None])[0]
                 state = params.get("state", [None])[0]
+                owner.iss = params.get("iss", [None])[0]
                 error = params.get("error", [None])[0]
 
                 if error:
@@ -215,6 +224,7 @@ async def _headless_callback(
         code = params.get("code", [None])[0]
         state = params.get("state", [None])[0]
         if code:
+            callback_server.iss = params.get("iss", [None])[0]
             return (code, state)
         return (line, None)
 
@@ -282,13 +292,19 @@ def create_oauth_provider(
     if no_browser:
         redirect_handler = _print_url_handler
 
-        async def headless_callback() -> tuple[str, str | None]:
-            return await _headless_callback(callback_server)
+        async def headless_callback() -> AuthorizationCodeResult:
+            code, state = await _headless_callback(callback_server)
+            return AuthorizationCodeResult(code=code, state=state, iss=callback_server.iss)
 
         callback_handler = headless_callback
     else:
         redirect_handler = open_browser_handler
-        callback_handler = callback_server.wait_for_callback
+
+        async def browser_callback() -> AuthorizationCodeResult:
+            code, state = await callback_server.wait_for_callback()
+            return AuthorizationCodeResult(code=code, state=state, iss=callback_server.iss)
+
+        callback_handler = browser_callback
 
     provider = OAuthClientProvider(
         server_url=server_url,

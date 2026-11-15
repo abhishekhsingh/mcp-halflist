@@ -4,9 +4,9 @@ halflist scans untrusted servers, so server-controlled text must never be
 interpreted as markup (an unbalanced closing tag raises ``MarkupError``).
 """
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
-mcp = FastMCP("markup[/x]server")
+mcp = MCPServer("markup[/x]server", version="1.0.0")
 
 
 @mcp.tool(name="list[/y]tool")

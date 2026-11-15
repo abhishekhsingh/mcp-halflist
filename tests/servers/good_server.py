@@ -1,6 +1,6 @@
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
-mcp = FastMCP("good-test-server")
+mcp = MCPServer("good-test-server", version="1.0.0")
 
 
 @mcp.tool()

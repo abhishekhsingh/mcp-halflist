@@ -35,7 +35,7 @@ def _make_tool(name: str = "test_tool") -> types.Tool:
     return types.Tool(
         name=name,
         description="A test tool",
-        inputSchema={"type": "object", "properties": {"q": {"type": "string"}}},
+        input_schema={"type": "object", "properties": {"q": {"type": "string"}}},
     )
 
 
@@ -46,7 +46,7 @@ async def test_bench_timeout_counts_as_error() -> None:
 
     async def slow_call(name, args):
         await asyncio.sleep(10)
-        return MagicMock(content=[], isError=False)
+        return MagicMock(content=[], is_error=False)
 
     client.call_tool = AsyncMock(side_effect=slow_call)
     tool = _make_tool()
@@ -92,7 +92,7 @@ async def test_bench_timeout_warmup_failure() -> None:
 async def test_bench_no_timeout_works_normally() -> None:
     """Without call_timeout, calls should proceed without wrapping."""
     client = MagicMock()
-    client.call_tool = AsyncMock(return_value=MagicMock(content=[], isError=False))
+    client.call_tool = AsyncMock(return_value=MagicMock(content=[], is_error=False))
     tool = _make_tool()
 
     result = await bench_tool(
@@ -115,7 +115,7 @@ async def test_bench_no_timeout_works_normally() -> None:
 async def test_bench_custom_args_used() -> None:
     """Custom args should be passed to call_tool instead of generated ones."""
     client = MagicMock()
-    client.call_tool = AsyncMock(return_value=MagicMock(content=[], isError=False))
+    client.call_tool = AsyncMock(return_value=MagicMock(content=[], is_error=False))
     tool = _make_tool()
 
     custom = {"q": "my custom query"}
@@ -136,7 +136,7 @@ async def test_bench_custom_args_used() -> None:
 async def test_bench_no_custom_args_uses_generated() -> None:
     """Without custom_args, generated args should be used."""
     client = MagicMock()
-    client.call_tool = AsyncMock(return_value=MagicMock(content=[], isError=False))
+    client.call_tool = AsyncMock(return_value=MagicMock(content=[], is_error=False))
     tool = _make_tool()
 
     result = await bench_tool(

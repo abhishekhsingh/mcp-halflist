@@ -8,6 +8,7 @@ import time
 from typing import Any
 
 import httpx
+import httpx2
 
 logger = logging.getLogger("halflist")
 
@@ -53,7 +54,7 @@ def setup_debug_logging(
         logger.addHandler(file_handler)
 
     sdk_level = logging.DEBUG if debug else logging.INFO
-    for name in ("mcp", "httpx", "httpcore"):
+    for name in ("mcp", "httpx", "httpcore", "httpx2", "httpcore2"):
         sdk_logger = logging.getLogger(name)
         sdk_logger.setLevel(sdk_level)
         sdk_logger.addHandler(stderr_handler)
@@ -61,9 +62,9 @@ def setup_debug_logging(
             sdk_logger.addHandler(file_handler)
 
 
-def _mask_headers(headers: httpx.Headers | dict[str, str]) -> dict[str, str]:
+def _mask_headers(headers: httpx2.Headers | httpx.Headers | dict[str, str]) -> dict[str, str]:
     result: dict[str, str] = {}
-    items = headers.items() if isinstance(headers, (httpx.Headers, dict)) else []
+    items = headers.items() if isinstance(headers, (httpx2.Headers, httpx.Headers, dict)) else []
     for key, value in items:
         if key.lower() in SENSITIVE_HEADERS:
             result[key] = "*****"
@@ -120,12 +121,12 @@ def _format_args(args: dict[str, Any] | None) -> str:
         return _truncate(str(args))
 
 
-async def _log_request(request: httpx.Request) -> None:
+async def _log_request(request: httpx2.Request) -> None:
     masked = _mask_headers(request.headers)
     logger.debug(f"HTTP → {request.method} {request.url} [headers: {masked}]")
 
 
-async def _log_response(response: httpx.Response) -> None:
+async def _log_response(response: httpx2.Response) -> None:
     request = response.request
     size = len(response.content) if hasattr(response, "_content") else "?"
     logger.debug(f"HTTP ← {response.status_code} ({size}B) [{request.method} {request.url}]")

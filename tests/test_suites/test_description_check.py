@@ -11,7 +11,7 @@ def _make_tool(name: str, description: str | None = "A tool") -> MagicMock:
     tool = MagicMock()
     tool.name = name
     tool.description = description
-    tool.inputSchema = {
+    tool.input_schema = {
         "type": "object",
         "properties": {"x": {"type": "string"}},
         "required": ["x"],
@@ -30,7 +30,7 @@ async def test_absent_description_produces_warn() -> None:
     )
     call_result = MagicMock()
     call_result.content = [MagicMock(type="text")]
-    call_result.isError = False
+    call_result.is_error = False
     client.call_tool = AsyncMock(return_value=call_result)
 
     suite = ToolsSuite(client)
@@ -53,7 +53,7 @@ async def test_empty_description_produces_warn() -> None:
     )
     call_result = MagicMock()
     call_result.content = [MagicMock(type="text")]
-    call_result.isError = False
+    call_result.is_error = False
     client.call_tool = AsyncMock(return_value=call_result)
 
     suite = ToolsSuite(client)
@@ -77,7 +77,7 @@ async def test_both_absent_and_empty_description() -> None:
     )
     call_result = MagicMock()
     call_result.content = [MagicMock(type="text")]
-    call_result.isError = False
+    call_result.is_error = False
     client.call_tool = AsyncMock(return_value=call_result)
 
     suite = ToolsSuite(client)
@@ -102,7 +102,7 @@ async def test_all_have_descriptions_passes() -> None:
     )
     call_result = MagicMock()
     call_result.content = [MagicMock(type="text")]
-    call_result.isError = False
+    call_result.is_error = False
     client.call_tool = AsyncMock(return_value=call_result)
 
     suite = ToolsSuite(client)

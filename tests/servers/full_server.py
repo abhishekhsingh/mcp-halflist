@@ -1,6 +1,6 @@
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
-mcp = FastMCP("full-test-server")
+mcp = MCPServer("full-test-server", version="1.0.0")
 
 
 # ── Tools ────────────────────────────────────────────────────────────────────

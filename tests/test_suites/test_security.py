@@ -69,7 +69,7 @@ async def test_pin_verification_matching(good_client: HalflistClient) -> None:
     tool_hashes: dict[str, str] = {}
     for t in tools:
         payload = json.dumps(
-            {"name": t.name, "description": t.description, "inputSchema": t.inputSchema},
+            {"name": t.name, "description": t.description, "inputSchema": t.input_schema},
             sort_keys=True,
         )
         tool_hashes[t.name] = hashlib.sha256(payload.encode()).hexdigest()

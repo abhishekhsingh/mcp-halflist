@@ -389,8 +389,8 @@ class SecuritySuite(CheckSuite):
             return
 
         server_name = "unknown"
-        if self.client.init_result and hasattr(self.client.init_result, "serverInfo"):
-            server_name = self.client.init_result.serverInfo.name
+        if self.client.init_result and hasattr(self.client.init_result, "server_info"):
+            server_name = self.client.init_result.server_info.name
 
         if self._pin_file is not None:
             pin_file = self._pin_file
@@ -419,7 +419,7 @@ class SecuritySuite(CheckSuite):
                 {
                     "name": t.name,
                     "description": t.description,
-                    "inputSchema": t.inputSchema,
+                    "inputSchema": t.input_schema,
                 },
                 sort_keys=True,
             )

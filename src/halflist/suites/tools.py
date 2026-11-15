@@ -62,7 +62,7 @@ class ToolsSuite(CheckSuite):
         else:
             self.record("Every tool has a description", "PASS")
 
-        bad_schema = [t.name for t in tools if t.inputSchema.get("type") != "object"]
+        bad_schema = [t.name for t in tools if t.input_schema.get("type") != "object"]
         if bad_schema:
             self.record(
                 'inputSchema contains "type": "object"',
@@ -89,7 +89,7 @@ class ToolsSuite(CheckSuite):
             self.record("Tool names follow recommended pattern", "PASS")
 
         first_tool = tools[0]
-        args = self._tool_args.get(first_tool.name) or generate_args(first_tool.inputSchema)
+        args = self._tool_args.get(first_tool.name) or generate_args(first_tool.input_schema)
         call_result = None
         try:
             t0 = self.measure()
@@ -121,7 +121,7 @@ class ToolsSuite(CheckSuite):
             self.record(
                 f"tools/call {first_tool.name} with empty args handles gracefully",
                 "PASS",
-                f"isError={getattr(empty_result, 'isError', False)}, {dur:.0f}ms",
+                f"isError={getattr(empty_result, 'is_error', False)}, {dur:.0f}ms",
             )
         except Exception as e:
             self.record(

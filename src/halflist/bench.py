@@ -22,7 +22,7 @@ async def bench_tool(
     call_timeout: float | None = None,
     custom_args: dict[str, Any] | None = None,
 ) -> ToolBenchmark:
-    args = custom_args if custom_args is not None else generate_args(tool.inputSchema)
+    args = custom_args if custom_args is not None else generate_args(tool.input_schema)
     errors = 0
 
     warmup_failures = 0
@@ -33,7 +33,7 @@ async def bench_tool(
                 result = await asyncio.wait_for(coro, timeout=call_timeout)
             else:
                 result = await coro
-            if getattr(result, "isError", False):
+            if getattr(result, "is_error", False):
                 warmup_failures += 1
         except (asyncio.TimeoutError, TimeoutError):
             warmup_failures += 1
@@ -65,7 +65,7 @@ async def bench_tool(
             else:
                 result = await coro
             elapsed = (time.monotonic() - start) * 1000
-            if getattr(result, "isError", False):
+            if getattr(result, "is_error", False):
                 errors += 1
             latencies.append(elapsed)
         except (asyncio.TimeoutError, TimeoutError):
