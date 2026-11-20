@@ -11,13 +11,20 @@ authors = [
 maintainers = [
     { name = "Abhishekh Singh", email = "abhishekcp.singh67@gmail.com" }
 ]
-keywords = ["mcp", "model-context-protocol", "testing", "cli", "conformance", "security", "prompt-injection", "tool-poisoning", "benchmarking"]
+keywords = ["mcp", "mcp-server", "mcp-testing", "model-context-protocol", "testing", "cli", "conformance", "linter", "security", "security-scanner", "prompt-injection", "tool-poisoning", "oauth", "streamable-http", "benchmarking", "ci", "github-actions"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Information Technology",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
     "Topic :: Software Development :: Testing",
 ]
 dependencies = [
@@ -44,6 +51,8 @@ halflist = "halflist.cli:app"
 Homepage = "https://github.com/abhishekhsingh/mcp-halflist"
 Repository = "https://github.com/abhishekhsingh/mcp-halflist"
 Issues = "https://github.com/abhishekhsingh/mcp-halflist/issues"
+Changelog = "https://github.com/abhishekhsingh/mcp-halflist/blob/main/CHANGELOG.md"
+Action = "https://github.com/abhishekhsingh/halflist-action"
 Author = "https://abhishekhsingh.github.io/"
 
 [build-system]
