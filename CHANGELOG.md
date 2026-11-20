@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.2 (2026-11-20)
+
+### Changes
+- Package metadata: more keywords, Python 3.10 to 3.12 and Security classifiers, and Changelog and GitHub Action links on PyPI
+
 ## v1.1.1 (2026-11-15)
 
 ### Bug Fixes
